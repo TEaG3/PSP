@@ -269,38 +269,21 @@ static void draw_actor(ObjModel *model,Texture *texture,float x,float y,float z,
     sceGumPopMatrix();
 }
 
-static void draw_model(ObjModel *model, Texture *texture,
-                       float x, float y, float z, float scale) {
-    ScePspFVector3 pos = {x, y, z};
-    ScePspFVector3 scl = {scale, scale, scale};
-    if (!model) {
-        draw_cube(x, y, z, scale);
-        return;
-    }
-    sceGumPushMatrix();
-    sceGumTranslate(&pos);
-    sceGumScale(&scl);
-    sceGuColor(0xFFFFFFFF);
-    if (texture) bindTexture(texture);
-    else sceGuDisable(GU_TEXTURE_2D);
-    objDraw(model);
-    sceGumPopMatrix();
-    sceGuDisable(GU_TEXTURE_2D);
-}
-
 static void update_game(const SceCtrlData *pad) {
     float move=0.0f;
     unsigned int buttons=pad->Buttons;
     int hit;
     if(pressed(buttons,PSP_CTRL_START)){paused=1;pause_mode=0;return;}
-    if(buttons&PSP_CTRL_LEFT)player_angle-=0.045f;
-    if(buttons&PSP_CTRL_RIGHT)player_angle+=0.045f;
-    if(buttons&PSP_CTRL_UP)move=(buttons&PSP_CTRL_RTRIGGER)?0.24f:0.14f;
-    if(buttons&PSP_CTRL_DOWN)move=-0.12f;
+    if(!(buttons&PSP_CTRL_LTRIGGER)){
+        if(buttons&PSP_CTRL_LEFT)player_angle-=0.045f;
+        if(buttons&PSP_CTRL_RIGHT)player_angle+=0.045f;
+    }
+    if(buttons&PSP_CTRL_UP)move=(buttons&PSP_CTRL_RTRIGGER)?0.09f:0.055f;
+    if(buttons&PSP_CTRL_DOWN)move=-0.045f;
     if(pad->Lx>150)player_angle+=0.035f;
     else if(pad->Lx<105)player_angle-=0.035f;
-    if(pad->Ly<110)move=(buttons&PSP_CTRL_RTRIGGER)?0.24f:0.14f;
-    else if(pad->Ly>145)move=-0.12f;
+    if(pad->Ly<110)move=(buttons&PSP_CTRL_RTRIGGER)?0.09f:0.055f;
+    else if(pad->Ly>145)move=-0.045f;
     player_x+=sinf(player_angle)*move; player_z+=cosf(player_angle)*move;
     if(player_x>current_stage.limit)player_x=current_stage.limit;
     if(player_x<-current_stage.limit)player_x=-current_stage.limit;
@@ -308,21 +291,25 @@ static void update_game(const SceCtrlData *pad) {
     if(player_z<-current_stage.limit)player_z=-current_stage.limit;
     player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
     player_state.aiming=(buttons&PSP_CTRL_LTRIGGER)!=0;
-    player_state.anim=move==0.0f?(player_state.aiming?PLAYER_AIM:PLAYER_IDLE):
-                     ((buttons&PSP_CTRL_RTRIGGER)?PLAYER_RUN:PLAYER_WALK);
+    player_state.anim=player_state.reloading?PLAYER_RELOAD:
+                     (hit_flash_frames>0?PLAYER_HURT:
+                     (move==0.0f?(player_state.aiming?PLAYER_AIM:PLAYER_IDLE):
+                     ((buttons&PSP_CTRL_RTRIGGER)?PLAYER_RUN:PLAYER_WALK)));
     if(pressed(buttons,PSP_CTRL_SQUARE)&&gameplayReload(&player_state,&weapons[selected_weapon]))playSound(SFX_RELOAD);
     gameplayUpdateReload(&player_state,&weapons[selected_weapon]);
     gameplayUpdateEnemies(&player_state,enemies,1.0f/60.0f);
     if(animation_frame<1000000)animation_frame++;
     if(muzzle_flash_frames>0)muzzle_flash_frames--;
     if(hit_flash_frames>0)hit_flash_frames--;
-    if(player_state.hp<player_previous_hp){playSound(SFX_HURT);hit_flash_frames=8;}
+    if(player_state.hp<player_previous_hp){playSound(SFX_HURT);hit_flash_frames=8;player_state.anim=PLAYER_HURT;}
     player_previous_hp=player_state.hp;
     if(player_state.hp<=0){paused=1;pause_mode=4;}
     if(pressed(buttons,PSP_CTRL_CROSS)){
         int had_ammo=weapons[selected_weapon].mag;
         hit=gameplayFire(&player_state,&weapons[selected_weapon],enemies,GAME_ENEMY_MAX,16.0f,
-                         player_state.aiming?0.28f:0.18f);
+                         selected_weapon==WEAPON_RIFLE?24.0f:(selected_weapon==WEAPON_SHOTGUN?11.0f:16.0f),
+                         selected_weapon==WEAPON_RIFLE?0.08f:(selected_weapon==WEAPON_SHOTGUN?0.36f:
+                         (player_state.aiming?0.10f:0.20f)));
         if(had_ammo>0){playSound(SFX_GUNSHOT);muzzle_flash_frames=3;if(hit>=0){score+=25;playSound(SFX_HIT);}}
         else playSound(SFX_EMPTY);
     }

@@ -146,6 +146,7 @@ static void draw_model(ObjModel *model, Texture *texture,
     sceGumPushMatrix();
     sceGumTranslate(&pos);
     sceGumScale(&scl);
+    sceGuColor(0xFFFFFFFF);
     if (texture) bindTexture(texture);
     else sceGuDisable(GU_TEXTURE_2D);
     objDraw(model);
@@ -289,6 +290,7 @@ static void render_scene(int aiming) {
     sceGuClearDepth(0);
     sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT);
     sceGuEnable(GU_DEPTH_TEST);
+    sceGuEnable(GU_CULL_FACE);
     sceGuDepthFunc(GU_GEQUAL);
     sceGuShadeModel(GU_SMOOTH);
     sceGuDisable(GU_TEXTURE_2D);

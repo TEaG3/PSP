@@ -38,7 +38,7 @@ typedef struct {
 } StageData;
 
 typedef struct {
-    int stage, objective, defeated, boss_hp, boss_active, merchant_open;
+    int stage, objective, defeated, boss_hp, boss_active, merchant_open, objective_total;
 } CampaignState;
 
 void gameplayInit(PlayerState *p, EnemyStateData enemies[GAME_ENEMY_MAX],

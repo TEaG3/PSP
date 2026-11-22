@@ -1,5 +1,6 @@
 #include "arabic_font.h"
 #include "arabic_font_data.h"
+#include "arabic_font_ascii_data.h"
 
 #include <pspgu.h>
 #include <stdint.h>
@@ -26,6 +27,7 @@ typedef struct {
 } FontVertex;
 
 static FontGlyph g_glyphs[ARABIC_FONT_GLYPH_COUNT];
+static FontGlyph g_ascii_glyphs[ASCII_FONT_GLYPH_COUNT];
 static int g_font_ready = 0;
 
 static const ArabicShape g_shapes[] = {
@@ -76,12 +78,13 @@ static int base64_value(char c) {
     return -1;
 }
 
-static size_t decode_base64(unsigned char *out, size_t capacity) {
+static size_t decode_base64(const char *encoded,
+                            unsigned char *out, size_t capacity) {
     size_t used = 0;
     uint32_t value = 0;
     int bits = -8;
-    const char *p = g_arabic_font_b64;
-    while (*p && used < capacity) {
+    const char *p = encoded;
+    while (p && *p && used < capacity) {
         int v;
         if (*p == '=') break;
         v = base64_value(*p++);
@@ -97,55 +100,76 @@ static size_t decode_base64(unsigned char *out, size_t capacity) {
     return used;
 }
 
-void arabicFontInit(void) {
+static int decode_font_table(const char *encoded, FontGlyph *table, int glyph_count) {
     unsigned char packed[4096];
     unsigned char raw[ARABIC_FONT_GLYPH_COUNT * FONT_GLYPH_BYTES];
     size_t packed_len, src = 0, dst = 0;
+    size_t expected = (size_t)glyph_count * FONT_GLYPH_BYTES;
     int i, row;
 
-    if (g_font_ready) return;
-    packed_len = decode_base64(packed, sizeof(packed));
-    while (src < packed_len && dst < sizeof(raw)) {
+    if (!encoded || !table || glyph_count <= 0 ||
+        expected > sizeof(raw)) return 0;
+
+    packed_len = decode_base64(encoded, packed, sizeof(packed));
+    while (src < packed_len && dst < expected) {
         unsigned char control = packed[src++];
         size_t count;
         if (control & 0x80) {
             count = (size_t)(control & 0x7F) + 1;
-            if (src + count > packed_len || dst + count > sizeof(raw)) break;
+            if (src + count > packed_len || dst + count > expected) return 0;
             memcpy(raw + dst, packed + src, count);
             src += count;
             dst += count;
         } else {
             count = (size_t)control + 1;
-            if (dst + count > sizeof(raw)) break;
+            if (dst + count > expected) return 0;
             memset(raw + dst, 0, count);
             dst += count;
         }
     }
-    if (dst != sizeof(raw)) return;
+    if (dst != expected || src != packed_len) return 0;
 
     src = 0;
-    for (i = 0; i < ARABIC_FONT_GLYPH_COUNT; ++i) {
-        g_glyphs[i].codepoint = (uint16_t)(((uint16_t)raw[src] << 8) | raw[src + 1]);
+    for (i = 0; i < glyph_count; ++i) {
+        table[i].codepoint = (uint16_t)(((uint16_t)raw[src] << 8) | raw[src + 1]);
         src += 2;
         for (row = 0; row < FONT_HEIGHT; ++row) {
-            g_glyphs[i].rows[row] = (uint16_t)(((uint16_t)raw[src] << 8) | raw[src + 1]);
+            table[i].rows[row] = (uint16_t)(((uint16_t)raw[src] << 8) | raw[src + 1]);
             src += 2;
         }
+        if (i > 0 && table[i - 1].codepoint >= table[i].codepoint) return 0;
     }
+    return 1;
+}
+
+void arabicFontInit(void) {
+    if (g_font_ready) return;
+    if (!decode_font_table(g_arabic_font_b64, g_glyphs, ARABIC_FONT_GLYPH_COUNT))
+        return;
+    if (!decode_font_table(g_ascii_font_b64, g_ascii_glyphs, ASCII_FONT_GLYPH_COUNT))
+        return;
     g_font_ready = 1;
 }
 
-static const FontGlyph *find_glyph(uint32_t cp) {
-    int lo = 0, hi = ARABIC_FONT_GLYPH_COUNT - 1;
-    if (!g_font_ready) arabicFontInit();
+static const FontGlyph *find_in_table(const FontGlyph *table, int count,
+                                      uint32_t cp) {
+    int lo = 0, hi = count - 1;
     while (lo <= hi) {
         int mid = lo + (hi - lo) / 2;
-        uint32_t found = g_glyphs[mid].codepoint;
-        if (found == cp) return &g_glyphs[mid];
+        uint32_t found = table[mid].codepoint;
+        if (found == cp) return &table[mid];
         if (found < cp) lo = mid + 1;
         else hi = mid - 1;
     }
     return NULL;
+}
+
+static const FontGlyph *find_glyph(uint32_t cp) {
+    if (!g_font_ready) arabicFontInit();
+    if (!g_font_ready) return NULL;
+    if (cp >= 0x20 && cp <= 0x7E)
+        return find_in_table(g_ascii_glyphs, ASCII_FONT_GLYPH_COUNT, cp);
+    return find_in_table(g_glyphs, ARABIC_FONT_GLYPH_COUNT, cp);
 }
 
 static const ArabicShape *find_shape(uint32_t cp) {

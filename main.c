@@ -264,11 +264,21 @@ static void draw_stage_environment(void) {
             draw_box(x,0.8f,7.0f,4.4f,2.2f,3.5f);
             draw_box(x,2.4f,7.0f,4.9f,0.7f,3.9f);
             draw_box(x+0.4f,0.0f,5.2f,0.9f,1.4f,0.25f);
+            /* Roof ridge, chimney and front lintel give each house a readable silhouette. */
+            draw_box(x,2.95f,7.0f,0.22f,0.28f,3.65f);
+            draw_box(x-1.55f,3.05f,8.15f,0.42f,0.95f,0.42f);
+            draw_box(x,1.85f,5.18f,1.35f,0.18f,0.18f);
         }
         for(i=-2;i<=2;i++){
-            draw_box((float)i*6.0f,1.7f,-9.0f,0.7f,3.3f,0.7f);
-            draw_box((float)i*6.0f,0.5f,-9.0f,2.0f,0.6f,1.5f);
+            float x=(float)i*6.0f;
+            draw_box(x,1.7f,-9.0f,0.7f,3.3f,0.7f);
+            draw_box(x,0.5f,-9.0f,2.0f,0.6f,1.5f);
+            draw_box(x+1.45f,0.8f,-9.0f,2.7f,0.16f,0.16f);
         }
+        /* Low stone well and market crates. */
+        draw_box(-5.0f,0.25f,0.0f,1.8f,0.5f,1.8f);
+        draw_box(5.0f,0.35f,-2.0f,1.0f,0.7f,0.9f);
+        draw_box(6.1f,0.35f,-2.0f,0.9f,0.7f,0.9f);
     } else if(current_stage.id==STAGE_CASTLE){
         draw_box(0.0f,2.0f,-edge+1.0f,edge*1.8f,4.0f,1.5f);
         draw_box(0.0f,2.0f,edge-1.0f,edge*1.8f,4.0f,1.5f);
@@ -278,6 +288,13 @@ static void draw_stage_environment(void) {
         }
         draw_box(-9.0f,0.6f,0.0f,2.8f,1.2f,2.8f);
         draw_box(9.0f,0.6f,0.0f,2.8f,1.2f,2.8f);
+        /* Gatehouse, buttresses and raised central platform. */
+        draw_box(0.0f,3.7f,-edge+2.0f,7.0f,1.0f,2.0f);
+        draw_box(-4.1f,2.1f,-edge+2.0f,0.8f,4.2f,1.5f);
+        draw_box(4.1f,2.1f,-edge+2.0f,0.8f,4.2f,1.5f);
+        draw_box(0.0f,0.18f,0.0f,5.8f,0.35f,4.2f);
+        draw_box(-13.0f,0.65f,7.0f,1.8f,1.3f,1.8f);
+        draw_box(13.0f,0.65f,7.0f,1.8f,1.3f,1.8f);
     } else {
         for(i=-2;i<=2;i++){
             draw_box((float)i*7.0f,0.4f,-8.0f,2.8f,0.8f,2.8f);
@@ -286,6 +303,15 @@ static void draw_stage_environment(void) {
         draw_box(-12.0f,1.0f,0.0f,3.5f,2.0f,3.5f);
         draw_box(12.0f,1.0f,0.0f,3.5f,2.0f,3.5f);
         draw_box(0.0f,2.0f,-edge+2.0f,edge*1.7f,4.0f,1.2f);
+        /* Industrial island silhouettes: containers, vents and a radio mast. */
+        draw_box(-6.0f,1.15f,2.0f,4.2f,2.3f,2.5f);
+        draw_box(6.0f,1.15f,2.0f,4.2f,2.3f,2.5f);
+        draw_box(-6.0f,2.45f,2.0f,4.35f,0.18f,2.65f);
+        draw_box(6.0f,2.45f,2.0f,4.35f,0.18f,2.65f);
+        draw_box(0.0f,3.2f,9.0f,0.22f,6.4f,0.22f);
+        draw_box(0.0f,5.9f,9.0f,2.1f,0.18f,0.18f);
+        draw_box(-2.0f,0.55f,-2.0f,1.8f,1.1f,1.8f);
+        draw_box(2.0f,0.55f,-2.0f,1.8f,1.1f,1.8f);
     }
 }
 

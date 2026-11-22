@@ -141,6 +141,48 @@ static void draw_cube(float x, float y, float z, float scale) {
     sceGumPopMatrix();
 }
 
+static void draw_tinted_cube(float x,float y,float z,float scale,unsigned int color) {
+    ColorVertex vertices[36];
+    ScePspFVector3 pos={x,y,z}, scl={scale,scale,scale};
+    int i;
+    memcpy(vertices,cube_vertices,sizeof(vertices));
+    for(i=0;i<36;i++)vertices[i].color=color;
+    sceGumPushMatrix();
+    sceGumTranslate(&pos);
+    sceGumScale(&scl);
+    sceGuDisable(GU_TEXTURE_2D);
+    sceGuDrawArray(GU_TRIANGLES,GU_COLOR_8888|GU_VERTEX_32BITF|GU_TRANSFORM_3D,
+                   36,NULL,vertices);
+    sceGumPopMatrix();
+}
+
+static void draw_stage_environment(void) {
+    int i;
+    float edge=current_stage.limit;
+    /* A broad low platform acts as the ground plane on the PSP's fixed-function renderer. */
+    draw_tinted_cube(0.0f,-2.0f,0.0f,edge*2.0f,current_stage.ground_color);
+    if(current_stage.id==STAGE_VILLAGE){
+        for(i=-1;i<=1;i++){
+            draw_tinted_cube((float)i*8.0f,0.5f,7.0f,3.0f,0xFF70543B);
+            draw_tinted_cube((float)i*8.0f,2.5f,7.0f,2.2f,0xFF9A744A);
+        }
+        draw_tinted_cube(-11.0f,1.0f,-5.0f,2.5f,0xFF4E653B);
+        draw_tinted_cube(11.0f,1.0f,-5.0f,2.5f,0xFF4E653B);
+    } else if(current_stage.id==STAGE_CASTLE){
+        for(i=-2;i<=2;i++){
+            draw_tinted_cube((float)i*7.0f,2.0f,edge-4.0f,2.0f,0xFF77716B);
+            draw_tinted_cube((float)i*7.0f,2.0f,-edge+4.0f,2.0f,0xFF77716B);
+        }
+        draw_tinted_cube(0.0f,1.0f,0.0f,4.0f,0xFF66513D);
+    } else {
+        for(i=-2;i<=2;i++){
+            draw_tinted_cube((float)i*7.0f,0.5f,6.0f,2.0f,0xFF68777A);
+            draw_tinted_cube((float)i*7.0f,0.5f,-7.0f,2.0f,0xFF68777A);
+        }
+        draw_tinted_cube(0.0f,1.0f,0.0f,3.5f,0xFF59636A);
+    }
+}
+
 static void draw_model(ObjModel *model, Texture *texture,
                        float x, float y, float z, float scale) {
     ScePspFVector3 pos = {x, y, z};
@@ -323,6 +365,7 @@ static void render_scene(int aiming) {
     sceGumMatrixMode(GU_MODEL);
     sceGumLoadIdentity();
 
+    draw_stage_environment();
     for (i = -4; i <= 4; ++i) {
         float edge=current_stage.limit;
         draw_cube((float)i * 4.0f, -1.0f, -edge, 3.8f);

@@ -4,6 +4,7 @@
 #include <pspkernel.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <malloc.h>
 #include <string.h>
 
 typedef struct {
@@ -118,7 +119,7 @@ done:
 void objDraw(ObjModel *model) {
     if (!model || !model->vertices || model->vertexCount <= 0) return;
     sceGuEnable(GU_TEXTURE_2D);
-    sceGumDrawArray(GU_TRIANGLES,
+    sceGuDrawArray(GU_TRIANGLES,
         GU_TEXTURE_32BITF | GU_VERTEX_32BITF | GU_TRANSFORM_3D,
         model->vertexCount, NULL, model->vertices);
 }

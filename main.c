@@ -107,6 +107,7 @@ static void save_current_game(void) {
 
 static void reset_game(void) {
     GameState saved;
+    camera_ready = 0;
     player_x = 0.0f;
     player_z = 0.0f;
     player_angle = 0.0f;
@@ -597,7 +598,8 @@ static void render_scene(int aiming) {
     sceGuClearDepth(0);
     sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT);
     sceGuEnable(GU_DEPTH_TEST);
-    sceGuEnable(GU_CULL_FACE);
+    /* Keep both triangle windings visible until every model's winding is verified. */
+    sceGuDisable(GU_CULL_FACE);
     sceGuDepthFunc(GU_GEQUAL);
     sceGuShadeModel(GU_SMOOTH);
     sceGuDisable(GU_TEXTURE_2D);

@@ -13,6 +13,9 @@
 #include "texture.h"
 #include "savedata.h"
 #include "gameplay.h"
+#include "navigation.h"
+#include "world_navigation.h"
+#include "enemy_navigation.h"
 
 PSP_MODULE_INFO("RE4 Proto", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
@@ -39,6 +42,7 @@ static WeaponState weapons[GAME_WEAPON_MAX];
 static InventoryState inventory;
 static CampaignState campaign;
 static StageData current_stage;
+static NavGrid stage_nav_grid;
 static int selected_weapon = WEAPON_HANDGUN;
 static int pause_mode, pause_selection, merchant_selection, inventory_selection;
 static int animation_frame, muzzle_flash_frames, hit_flash_frames, player_previous_hp;
@@ -120,6 +124,7 @@ static void reset_game(void) {
     gameplayInit(&player_state, enemies, weapons, &inventory, &campaign);
     gameplayLoadStage(STAGE_VILLAGE, &current_stage, enemies);
     gameplaySetStage(&campaign,STAGE_VILLAGE);
+    rebuild_stage_navigation();
     player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
     if (loadGame(&saved) == 0) {
         player_x = saved.player_x;
@@ -160,6 +165,7 @@ static void reset_game(void) {
           }
         }
     }
+    rebuild_stage_navigation();
     paused = 0; pause_mode=0; pause_selection=0;
     player_previous_hp=hp;
     game_started = 1;
@@ -208,43 +214,12 @@ static void draw_local_box(float x,float y,float z,float sx,float sy,float sz,fl
     sceGumPopMatrix();
 }
 
-typedef struct { float x, z, hx, hz; } WorldBlock;
-static int circle_hits_block(float x,float z,float radius,const WorldBlock *b) {
-    float nx=x<b->x-b->hx?b->x-b->hx:(x>b->x+b->hx?b->x+b->hx:x);
-    float nz=z<b->z-b->hz?b->z-b->hz:(z>b->z+b->hz?b->z+b->hz:z);
-    float dx=x-nx,dz=z-nz;
-    return dx*dx+dz*dz<radius*radius;
-}
 static int world_blocked(float x,float z,float radius) {
-    WorldBlock blocks[12]; int n=0,i;
-    if(current_stage.id==STAGE_VILLAGE) {
-        blocks[n++]=(WorldBlock){-9.0f,7.0f,2.2f,1.75f};
-        blocks[n++]=(WorldBlock){0.0f,7.0f,2.2f,1.75f};
-        blocks[n++]=(WorldBlock){9.0f,7.0f,2.2f,1.75f};
-        blocks[n++]=(WorldBlock){-12.0f,-9.0f,0.8f,0.8f};
-        blocks[n++]=(WorldBlock){-6.0f,-9.0f,0.8f,0.8f};
-        blocks[n++]=(WorldBlock){0.0f,-9.0f,0.8f,0.8f};
-        blocks[n++]=(WorldBlock){6.0f,-9.0f,0.8f,0.8f};
-        blocks[n++]=(WorldBlock){12.0f,-9.0f,0.8f,0.8f};
-    } else if(current_stage.id==STAGE_CASTLE) {
-        blocks[n++]=(WorldBlock){-9.0f,0.0f,1.4f,1.4f};
-        blocks[n++]=(WorldBlock){9.0f,0.0f,1.4f,1.4f};
-        blocks[n++]=(WorldBlock){-16.0f,-current_stage.limit+1.0f,1.1f,1.1f};
-        blocks[n++]=(WorldBlock){-8.0f,-current_stage.limit+1.0f,1.1f,1.1f};
-        blocks[n++]=(WorldBlock){0.0f,-current_stage.limit+1.0f,1.1f,1.1f};
-        blocks[n++]=(WorldBlock){8.0f,-current_stage.limit+1.0f,1.1f,1.1f};
-        blocks[n++]=(WorldBlock){16.0f,-current_stage.limit+1.0f,1.1f,1.1f};
-    } else {
-        blocks[n++]=(WorldBlock){-12.0f,0.0f,1.75f,1.75f};
-        blocks[n++]=(WorldBlock){12.0f,0.0f,1.75f,1.75f};
-        blocks[n++]=(WorldBlock){-14.0f,-8.0f,1.4f,1.4f};
-        blocks[n++]=(WorldBlock){-7.0f,-8.0f,1.4f,1.4f};
-        blocks[n++]=(WorldBlock){0.0f,-8.0f,1.4f,1.4f};
-        blocks[n++]=(WorldBlock){7.0f,-8.0f,1.4f,1.4f};
-        blocks[n++]=(WorldBlock){14.0f,-8.0f,1.4f,1.4f};
-    }
-    for(i=0;i<n;i++) if(circle_hits_block(x,z,radius,&blocks[i])) return 1;
-    return 0;
+    return worldNavBlocked(current_stage.id,current_stage.limit,x,z,radius);
+}
+static void rebuild_stage_navigation(void) {
+    worldNavBuild(current_stage.id,current_stage.limit,&stage_nav_grid);
+    enemyNavReset();
 }
 static void move_player(float dx,float dz) {
     float nx=player_x+dx,nz=player_z+dz,limit=current_stage.limit-0.65f;
@@ -378,7 +353,7 @@ static void update_game(const SceCtrlData *pad, float dt) {
                      ((buttons&PSP_CTRL_RTRIGGER)?PLAYER_RUN:PLAYER_WALK)));
     if(pressed(buttons,PSP_CTRL_SQUARE)&&gameplayReload(&player_state,&weapons[selected_weapon]))playSound(SFX_RELOAD);
     gameplayUpdateReload(&player_state,&weapons[selected_weapon]);
-    gameplayUpdateEnemies(&player_state,enemies,1.0f/60.0f);
+    enemyNavUpdate(&player_state,enemies,&stage_nav_grid,(StageId)current_stage.id,current_stage.limit,dt);
     if(animation_frame<1000000)animation_frame++;
     if(muzzle_flash_frames>0)muzzle_flash_frames--;
     if(hit_flash_frames>0)hit_flash_frames--;
@@ -441,6 +416,7 @@ static void update_game(const SceCtrlData *pad, float dt) {
                 campaign.stage++;
                 gameplayLoadStage((StageId)campaign.stage,&current_stage,enemies);
                 gameplaySetStage(&campaign,(StageId)campaign.stage);
+                rebuild_stage_navigation();
                 player_x=0.0f;player_z=0.0f;player_state.x=player_x;player_state.z=player_z;
                 camera_ready=0;
                 playSound(SFX_STAGE);

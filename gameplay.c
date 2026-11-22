@@ -45,9 +45,9 @@ void gameplayLoadStage(StageId id, StageData *s, EnemyStateData enemies[GAME_ENE
         memset(e,0,sizeof(*e));
         if(i<n){
             e->x=sx[i%6]+(float)(id*2); e->z=sz[i%6];
-            e->hp=(i==n-1 && id>0)?8:3; e->speed=1.0f+(float)id*0.18f;
+            e->hp=3+(int)id; e->speed=1.0f+(float)id*0.18f;
             e->active=1; e->state=ENEMY_IDLE;
-            e->boss=(i==n-1 && id>0);
+            e->boss=0;
         } else e->state=ENEMY_DEAD;
     }
 }
@@ -143,7 +143,7 @@ void gameplayUpdateCampaign(CampaignState *c,EnemyStateData enemies[GAME_ENEMY_M
 }
 void gameplaySetStage(CampaignState *c,StageId id){
     c->stage=(int)id;c->objective=0;c->defeated=0;c->boss_active=0;
-    c->boss_hp=30+(int)id*15;
+    c->boss_hp=30+(int)id*15;c->completed=0;
     c->objective_total=3+(int)id;c->stage_total=6+(int)id*2;
 }
 int gameplayBossDamage(CampaignState *c,int damage){

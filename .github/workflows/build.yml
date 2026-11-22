@@ -27,6 +27,8 @@ jobs:
         run: |
           gcc -std=c99 -O2 -Wall -Wextra -Werror gameplay.c tests/gameplay_test.c -lm -o /tmp/gameplay-test
           /tmp/gameplay-test
+          gcc -std=c99 -O2 -Wall -Wextra -Werror tests/arabic_shaper_test.c -o /tmp/arabic-shaper-test
+          /tmp/arabic-shaper-test
 
       - name: Download stb_image.h
         run: curl -fsSL https://raw.githubusercontent.com/nothings/stb/master/stb_image.h -o stb_image.h

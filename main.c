@@ -42,6 +42,8 @@ static StageData current_stage;
 static int selected_weapon = WEAPON_HANDGUN;
 static int pause_mode, pause_selection, merchant_selection, inventory_selection;
 static int animation_frame, muzzle_flash_frames, hit_flash_frames, player_previous_hp;
+static float camera_x, camera_y=3.8f, camera_z;
+static int camera_ready;
 
 static const ColorVertex cube_vertices[] = {
     {0xFF4D8C35,-0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f, 0.5f, 0.5f},
@@ -252,9 +254,6 @@ static void move_player(float dx,float dz) {
     if(!world_blocked(nx,player_z,0.42f))player_x=nx;
     if(!world_blocked(player_x,nz,0.42f))player_z=nz;
 }
-static float camera_x,camera_y=3.8f,camera_z;
-static int camera_ready;
-
 static void draw_stage_environment(void) {
     int i;
     float edge=current_stage.limit;

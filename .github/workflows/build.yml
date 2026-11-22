@@ -35,6 +35,10 @@ jobs:
           /tmp/gameplay-test
           gcc -std=c99 -O2 -Wall -Wextra -Werror navigation.c tests/navigation_test.c -o /tmp/navigation-test
           /tmp/navigation-test
+          gcc -std=c99 -O2 -Wall -Wextra -Werror gameplay.c navigation.c world_navigation.c tests/world_navigation_test.c -lm -o /tmp/world-navigation-test
+          /tmp/world-navigation-test
+          gcc -std=c99 -O2 -Wall -Wextra -Werror gameplay.c navigation.c world_navigation.c enemy_navigation.c tests/enemy_navigation_test.c -lm -o /tmp/enemy-navigation-test
+          /tmp/enemy-navigation-test
           gcc -std=c99 -O2 -Wall -Wextra -Werror tests/arabic_shaper_test.c -o /tmp/arabic-shaper-test
           /tmp/arabic-shaper-test
 

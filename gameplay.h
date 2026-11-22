@@ -52,6 +52,8 @@ int gameplayReload(PlayerState *p, WeaponState *weapon);
 void gameplayUpdateReload(PlayerState *p, WeaponState *weapon);
 int gameplayBuyAmmo(PlayerState *p, WeaponState *weapon, int amount, int price_per_round);
 int gameplayBuyHealth(PlayerState *p, InventoryState *bag, int price);
+int gameplayBuyWeapon(PlayerState *p, WeaponState weapons[GAME_WEAPON_MAX], WeaponId id);
+int gameplayUpgradeWeapon(PlayerState *p, WeaponState *weapon, int price);
 int gameplayUseHealth(PlayerState *p, InventoryState *bag);
 void gameplayUpdateCampaign(CampaignState *c, EnemyStateData enemies[GAME_ENEMY_MAX]);
 int gameplayBossDamage(CampaignState *c, int damage);

@@ -67,8 +67,9 @@ static void test_enemy_and_campaign(void) {
     WeaponState weapons[GAME_WEAPON_MAX]; InventoryState bag; CampaignState c;
     int i;
     gameplayInit(&p,enemies,weapons,&bag,&c);
-    gameplayLoadStage(STAGE_VILLAGE,0,enemies);
+    { StageData stage; gameplayLoadStage(STAGE_VILLAGE,&stage,enemies); }
     gameplaySetStage(&c,STAGE_VILLAGE);
+    p.x=enemies[0].x; p.z=enemies[0].z;
     for(i=0;i<30;i++)gameplayUpdateEnemies(&p,enemies,1.0f/60.0f);
     assert(enemies[0].state==ENEMY_CHASE || enemies[0].state==ENEMY_ATTACK);
     for(i=0;i<GAME_ENEMY_MAX;i++){enemies[i].active=0;enemies[i].state=ENEMY_DEAD;}

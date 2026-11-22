@@ -132,6 +132,7 @@ int gameplayUseHealth(PlayerState *p,InventoryState *b){
 }
 void gameplayUpdateCampaign(CampaignState *c,EnemyStateData enemies[GAME_ENEMY_MAX]){
     int i,remaining=0;
+    if(c->completed)return;
     for(i=0;i<GAME_ENEMY_MAX;i++)if(enemies[i].active&&enemies[i].state!=ENEMY_DEAD)remaining++;
     if(c->boss_active==0){
         c->defeated=c->stage_total-remaining;

@@ -33,6 +33,7 @@ static float player_x, player_z, player_angle;
 static int hp, score, ammo, reserve_ammo;
 static int game_started, paused, previous_buttons;
 static int target_active[TARGET_COUNT];
+static int target_hp[TARGET_COUNT];
 static const float target_x[TARGET_COUNT] = {-7.0f, 7.0f, -7.0f, 7.0f};
 static const float target_z[TARGET_COUNT] = {-8.0f, -8.0f, 8.0f, 8.0f};
 static ObjModel *player_model, *enemy_model;
@@ -100,7 +101,7 @@ static void reset_game(void) {
     score = 0;
     ammo = 10;
     reserve_ammo = 40;
-    for (i = 0; i < TARGET_COUNT; ++i) target_active[i] = 1;
+    for (i = 0; i < TARGET_COUNT; ++i) { target_active[i] = 1; target_hp[i] = 2; }
     if (loadGame(&saved) == 0) {
         player_x = saved.player_x;
         player_z = saved.player_z;
@@ -191,6 +192,7 @@ static void update_game(const SceCtrlData *pad) {
     if (pressed(buttons, PSP_CTRL_CROSS) || pressed(buttons, PSP_CTRL_RTRIGGER)) {
         int hit = 0;
         if (ammo > 0) {
+            int damage = (buttons & PSP_CTRL_LTRIGGER) ? 2 : 1;
             float tolerance = (buttons & PSP_CTRL_LTRIGGER) ? 0.34f : 0.22f;
             --ammo;
             playSound(SFX_GUNSHOT);
@@ -205,8 +207,11 @@ static void update_game(const SceCtrlData *pad) {
                 while (difference > PI_F) difference -= 2.0f * PI_F;
                 while (difference < -PI_F) difference += 2.0f * PI_F;
                 if (distance < 14.0f && fabsf(difference) < tolerance) {
-                    target_active[i] = 0;
-                    score += 100;
+                    target_hp[i] -= damage;
+                    if (target_hp[i] <= 0) {
+                        target_active[i] = 0;
+                        score += 100;
+                    }
                     hit = 1;
                     break;
                 }
@@ -229,9 +234,9 @@ static void render_menu(void) {
     sceGuDisable(GU_TEXTURE_2D);
     arabicDrawTextCenter(240.0f, 48.0f, 1.4f, 0xFFFFFFFF, "ريزيدنت إيفل 4");
     arabicDrawTextCenter(240.0f, 94.0f, 1.0f, 0xFFB8D8FF, "نسخة تجريبية للعبة");
-    arabicDrawTextCenter(240.0f, 154.0f, 1.0f, 0xFFFFFFFF, "اضغط X لبدء اللعب");
-    arabicDrawTextCenter(240.0f, 184.0f, 0.9f, 0xFFFFFFFF, "اضغط O للخروج");
-    arabicDrawTextCenter(240.0f, 238.0f, 0.7f, 0xFFB0B8C0, "تعمل على PSP و PPSSPP");
+    arabicDrawTextCenter(240.0f, 154.0f, 1.0f, 0xFFFFFFFF, "زر البدء لبدء اللعب");
+    arabicDrawTextCenter(240.0f, 184.0f, 0.9f, 0xFFFFFFFF, "زر الدائرة للخروج");
+    arabicDrawTextCenter(240.0f, 238.0f, 0.7f, 0xFFB0B8C0, "تجربة أولية على الجهاز المحمول");
     sceGuFinish();
     sceGuSync(0, 0);
     sceGuSwapBuffers();
@@ -245,9 +250,9 @@ static void render_pause(void) {
     sceGuDisable(GU_CULL_FACE);
     sceGuDisable(GU_TEXTURE_2D);
     arabicDrawTextCenter(240.0f, 62.0f, 1.3f, 0xFFFFFFFF, "اللعبة متوقفة");
-    arabicDrawTextCenter(240.0f, 126.0f, 0.95f, 0xFFFFFFFF, "اضغط START للمتابعة");
-    arabicDrawTextCenter(240.0f, 162.0f, 0.9f, 0xFFFFFFFF, "اضغط O للقائمة الرئيسية");
-    arabicDrawTextCenter(240.0f, 198.0f, 0.85f, 0xFFB8D8FF, "اضغط مثلث لحفظ التقدم");
+    arabicDrawTextCenter(240.0f, 126.0f, 0.95f, 0xFFFFFFFF, "زر البدء للمتابعة");
+    arabicDrawTextCenter(240.0f, 162.0f, 0.9f, 0xFFFFFFFF, "زر الدائرة للقائمة الرئيسية");
+    arabicDrawTextCenter(240.0f, 198.0f, 0.85f, 0xFFB8D8FF, "زر المثلث لحفظ التقدم");
     sceGuFinish();
     sceGuSync(0, 0);
     sceGuSwapBuffers();
@@ -318,7 +323,7 @@ static void render_scene(int aiming) {
                    hp, score, ammo, reserve_ammo);
     arabicDrawTextRTL(472.0f, 8.0f, 0.72f, 0xFFFFFFFF, hud);
     arabicDrawTextRTL(472.0f, 30.0f, 0.62f, 0xFFB8D8FF,
-                      "X أو R إطلاق - مربع إعادة التلقيم - SELECT حفظ");
+                      "التصويب أو الزناد - مربع لإعادة التلقيم - زر الاختيار للحفظ");
     sceGuFinish();
     sceGuSync(0, 0);
     sceGuSwapBuffers();

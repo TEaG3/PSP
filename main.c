@@ -378,19 +378,79 @@ static void render_menu(void) {
 }
 
 static void render_pause(void) {
-    sceGuStart(GU_DIRECT, display_list);
+    sceGuStart(GU_DIRECT,display_list);
     sceGuClearColor(0xFF101820);
     sceGuClear(GU_COLOR_BUFFER_BIT);
-    sceGuDisable(GU_DEPTH_TEST);
-    sceGuDisable(GU_CULL_FACE);
-    sceGuDisable(GU_TEXTURE_2D);
-    arabicDrawTextCenter(240.0f, 62.0f, 1.3f, 0xFFFFFFFF, "اللعبة متوقفة");
-    arabicDrawTextCenter(240.0f, 126.0f, 0.95f, 0xFFFFFFFF, "زر البدء للمتابعة");
-    arabicDrawTextCenter(240.0f, 162.0f, 0.9f, 0xFFFFFFFF, "زر الدائرة للقائمة الرئيسية");
-    arabicDrawTextCenter(240.0f, 198.0f, 0.85f, 0xFFB8D8FF, "زر المثلث لحفظ التقدم");
-    sceGuFinish();
-    sceGuSync(0, 0);
-    sceGuSwapBuffers();
+    sceGuDisable(GU_DEPTH_TEST);sceGuDisable(GU_CULL_FACE);sceGuDisable(GU_TEXTURE_2D);
+    if(pause_mode==0){
+        arabicDrawTextCenter(240.0f,32.0f,1.15f,0xFFFFFFFF,"القائمة");
+        arabicDrawTextCenter(240.0f,66.0f,0.82f,0xFFFFFFFF,pause_selection==0?"> متابعة اللعب":"متابعة اللعب");
+        arabicDrawTextCenter(240.0f,96.0f,0.82f,0xFFFFFFFF,pause_selection==1?"> حفظ التقدم":"حفظ التقدم");
+        arabicDrawTextCenter(240.0f,126.0f,0.82f,0xFFFFFFFF,pause_selection==2?"> التاجر":"التاجر");
+        arabicDrawTextCenter(240.0f,156.0f,0.82f,0xFFFFFFFF,pause_selection==3?"> المخزون":"المخزون");
+        arabicDrawTextCenter(240.0f,186.0f,0.82f,0xFFFFFFFF,pause_selection==4?"> القائمة الرئيسية":"القائمة الرئيسية");
+        arabicDrawTextCenter(240.0f,238.0f,0.68f,0xFFB8D8FF,"الاتجاهات للاختيار - X للتأكيد - O للعودة");
+    } else if(pause_mode==1){
+        arabicDrawTextCenter(240.0f,25.0f,1.1f,0xFFFFD080,"التاجر");
+        {
+            char money[64];
+            (void)snprintf(money,sizeof(money),"رصيدك: %d",player_state.money);
+            arabicDrawTextCenter(240.0f,53.0f,0.75f,0xFFFFFFFF,money);
+        }
+        arabicDrawTextCenter(240.0f,85.0f,0.78f,0xFFFFFFFF,merchant_selection==0?"> شراء 10 طلقات - 20":"شراء 10 طلقات - 20");
+        arabicDrawTextCenter(240.0f,115.0f,0.78f,0xFFFFFFFF,merchant_selection==1?"> شراء علاج - 120":"شراء علاج - 120");
+        arabicDrawTextCenter(240.0f,145.0f,0.78f,0xFFFFFFFF,merchant_selection==2?"> شراء بندقية خرطوش - 800":"شراء بندقية خرطوش - 800");
+        arabicDrawTextCenter(240.0f,175.0f,0.78f,0xFFFFFFFF,merchant_selection==3?"> شراء بندقية - 1200":"شراء بندقية - 1200");
+        arabicDrawTextCenter(240.0f,205.0f,0.78f,0xFFFFFFFF,merchant_selection==4?"> ترقية السلاح الحالي - 250":"ترقية السلاح الحالي - 250");
+        arabicDrawTextCenter(240.0f,237.0f,0.72f,0xFFB8D8FF,merchant_selection==5?"> رجوع":"رجوع - O للعودة");
+    } else {
+        char item[80];
+        arabicDrawTextCenter(240.0f,36.0f,1.1f,0xFFFFFFFF,"المخزون");
+        (void)snprintf(item,sizeof(item),"العلاج المتوفر: %d",inventory.amount[ITEM_HEALTH]);
+        arabicDrawTextCenter(240.0f,90.0f,0.9f,0xFFFFFFFF,item);
+        arabicDrawTextCenter(240.0f,140.0f,0.85f,0xFFFFFFFF,"X لاستخدام العلاج");
+        arabicDrawTextCenter(240.0f,190.0f,0.8f,0xFFB8D8FF,"O للعودة");
+    }
+    sceGuFinish();sceGuSync(0,0);sceGuSwapBuffers();
+}
+
+static void update_pause_menu(unsigned int buttons) {
+    if(pause_mode==0){
+        if(pressed(buttons,PSP_CTRL_UP))pause_selection=(pause_selection+4)%5;
+        if(pressed(buttons,PSP_CTRL_DOWN))pause_selection=(pause_selection+1)%5;
+        if(pressed(buttons,PSP_CTRL_CIRCLE)||pressed(buttons,PSP_CTRL_START)){paused=0;return;}
+        if(pressed(buttons,PSP_CTRL_TRIANGLE)){save_current_game();return;}
+        if(pressed(buttons,PSP_CTRL_CROSS)){
+            switch(pause_selection){
+                case 0: paused=0;break;
+                case 1: save_current_game();break;
+                case 2: pause_mode=1;merchant_selection=0;break;
+                case 3: pause_mode=2;inventory_selection=0;break;
+                case 4: game_started=0;paused=0;break;
+                default: break;
+            }
+        }
+    } else if(pause_mode==1){
+        if(pressed(buttons,PSP_CTRL_UP))merchant_selection=(merchant_selection+5)%6;
+        if(pressed(buttons,PSP_CTRL_DOWN))merchant_selection=(merchant_selection+1)%6;
+        if(pressed(buttons,PSP_CTRL_CIRCLE)||pressed(buttons,PSP_CTRL_TRIANGLE)){pause_mode=0;return;}
+        if(pressed(buttons,PSP_CTRL_CROSS)){
+            int ok=0;
+            switch(merchant_selection){
+                case 0: ok=gameplayBuyAmmo(&player_state,&weapons[selected_weapon],10,2);break;
+                case 1: ok=gameplayBuyHealth(&player_state,&inventory,120);break;
+                case 2: ok=gameplayBuyWeapon(&player_state,weapons,WEAPON_SHOTGUN);break;
+                case 3: ok=gameplayBuyWeapon(&player_state,weapons,WEAPON_RIFLE);break;
+                case 4: ok=gameplayUpgradeWeapon(&player_state,&weapons[selected_weapon],250);break;
+                case 5: pause_mode=0;break;
+                default: break;
+            }
+            if(ok)playSound(SFX_PICKUP);
+        }
+    } else {
+        if(pressed(buttons,PSP_CTRL_CROSS))(void)gameplayUseHealth(&player_state,&inventory);
+        if(pressed(buttons,PSP_CTRL_CIRCLE)||pressed(buttons,PSP_CTRL_TRIANGLE))pause_mode=0;
+    }
 }
 
 static void draw_aim_line(void) {
@@ -514,12 +574,9 @@ int main(void) {
             if (pressed(pad.Buttons, PSP_CTRL_CIRCLE)) running = 0;
         } else if (paused) {
             render_pause();
-            if (pressed(pad.Buttons, PSP_CTRL_START)) paused = 0;
-            if (pressed(pad.Buttons, PSP_CTRL_CIRCLE)) {
-                game_started = 0;
-                paused = 0;
-            }
-            if (pressed(pad.Buttons, PSP_CTRL_TRIANGLE)) save_current_game();
+            update_pause_menu(pad.Buttons);
+            hp=player_state.hp; ammo=weapons[selected_weapon].mag;
+            reserve_ammo=weapons[selected_weapon].reserve;
         } else {
             update_game(&pad);
             render_scene((pad.Buttons & PSP_CTRL_LTRIGGER) != 0);

@@ -344,8 +344,11 @@ static void draw_actor(ObjModel *model,Texture *texture,float x,float y,float z,
     sceGumPopMatrix();
 }
 
-static void update_game(const SceCtrlData *pad) {
-    float move=0.0f, turn=0.0f, step;
+static void update_game(const SceCtrlData *pad, float dt) {
+    float move=0.0f, turn=0.0f, step, frame_scale;
+    if(!isfinite(dt) || dt<=0.0f) dt=1.0f/60.0f;
+    if(dt>0.05f) dt=0.05f;
+    frame_scale=dt*60.0f;
     unsigned int buttons=pad->Buttons;
     int hit;
     if(pressed(buttons,PSP_CTRL_START)){paused=1;pause_mode=0;return;}
@@ -355,7 +358,7 @@ static void update_game(const SceCtrlData *pad) {
     }
     if(pad->Lx>150)turn+=((float)pad->Lx-150.0f)/105.0f*0.055f;
     else if(pad->Lx<105)turn-=((105.0f-(float)pad->Lx)/105.0f)*0.055f;
-    player_angle+=turn;
+    player_angle+=turn*frame_scale;
     if(player_angle>3.14159265f)player_angle-=6.2831853f;
     if(player_angle<-3.14159265f)player_angle+=6.2831853f;
     if(buttons&PSP_CTRL_UP)move=1.0f;
@@ -364,7 +367,8 @@ static void update_game(const SceCtrlData *pad) {
     else if(pad->Ly>145)move=( (float)pad->Ly-145.0f)/110.0f;
     if(move>1.0f)move=1.0f;if(move<-1.0f)move=-1.0f;
     step=(buttons&PSP_CTRL_RTRIGGER)?0.105f:0.065f;
-    move_player(sinf(player_angle)*move*step,cosf(player_angle)*move*step);
+    move_player(sinf(player_angle)*move*step*frame_scale,
+                cosf(player_angle)*move*step*frame_scale);
     player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
     player_state.aiming=(buttons&PSP_CTRL_LTRIGGER)!=0;
     player_state.anim=player_state.reloading?PLAYER_RELOAD:
@@ -437,6 +441,7 @@ static void update_game(const SceCtrlData *pad) {
                 gameplayLoadStage((StageId)campaign.stage,&current_stage,enemies);
                 gameplaySetStage(&campaign,(StageId)campaign.stage);
                 player_x=0.0f;player_z=0.0f;player_state.x=player_x;player_state.z=player_z;
+                camera_ready=0;
                 playSound(SFX_STAGE);
                 save_current_game();
             } else {
@@ -575,12 +580,15 @@ static void draw_aim_line(void) {
         2, NULL, line);
 }
 
-static void render_scene(int aiming) {
+static void render_scene(int aiming, float dt) {
     int i;
     float desired_x=player_x-sinf(player_angle)*(aiming?3.15f:5.35f)+cosf(player_angle)*0.82f;
     float desired_y=aiming?2.45f:3.45f;
     float desired_z=player_z-cosf(player_angle)*(aiming?3.15f:5.35f)-sinf(player_angle)*0.82f;
-    float camera_lerp=aiming?0.22f:0.14f;
+    float camera_lerp;
+    if(!isfinite(dt) || dt<=0.0f) dt=1.0f/60.0f;
+    if(dt>0.05f) dt=0.05f;
+    camera_lerp=1.0f-expf(-(aiming?10.0f:6.0f)*dt);
     ScePspFVector3 camera;
     ScePspFVector3 target = {player_x+sinf(player_angle)*1.15f, 1.12f, player_z+cosf(player_angle)*1.15f};
     ScePspFVector3 up = {0.0f, 1.0f, 0.0f};
@@ -671,6 +679,7 @@ static void init_graphics(void) {
 
 int main(void) {
     int running = 1;
+    unsigned int previous_time;
     setup_callbacks();
     sceCtrlSetSamplingCycle(0);
     sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
@@ -678,9 +687,14 @@ int main(void) {
     init_graphics();
     initAudio();
     load_assets();
+    previous_time=sceKernelGetSystemTimeLow();
 
     while (running) {
         SceCtrlData pad;
+        unsigned int now=sceKernelGetSystemTimeLow();
+        float dt=(float)(unsigned int)(now-previous_time)/1000000.0f;
+        previous_time=now;
+        if(dt<=0.0f || dt>0.05f) dt=1.0f/60.0f;
         sceCtrlPeekBufferPositive(&pad, 1);
         if (!game_started) {
             render_menu();
@@ -692,8 +706,8 @@ int main(void) {
             hp=player_state.hp; ammo=weapons[selected_weapon].mag;
             reserve_ammo=weapons[selected_weapon].reserve;
         } else {
-            update_game(&pad);
-            render_scene((pad.Buttons & PSP_CTRL_LTRIGGER) != 0);
+            update_game(&pad,dt);
+            render_scene((pad.Buttons & PSP_CTRL_LTRIGGER) != 0,dt);
         }
         if (pad.Buttons & PSP_CTRL_HOME) running = 0;
         previous_buttons = pad.Buttons;

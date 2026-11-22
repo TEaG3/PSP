@@ -31,9 +31,9 @@ void gameplayInit(PlayerState *p, EnemyStateData enemies[GAME_ENEMY_MAX],
 
 void gameplayLoadStage(StageId id, StageData *s, EnemyStateData enemies[GAME_ENEMY_MAX]) {
     static const StageData stages[3]={
-        {STAGE_VILLAGE,"القرية",0xFF526344,0xFF62513B,0xFFB58B50,18.0f,6,3},
-        {STAGE_CASTLE,"القلعة",0xFF343442,0xFF77716B,0xFFB9A36C,22.0f,8,4},
-        {STAGE_ISLAND,"الجزيرة",0xFF46545A,0xFF555B60,0xFF8B9A9C,24.0f,10,5}
+        {STAGE_VILLAGE,"VILLAGE",0xFF526344,0xFF62513B,0xFFB58B50,18.0f,6,3},
+        {STAGE_CASTLE,"CASTLE",0xFF343442,0xFF77716B,0xFFB9A36C,22.0f,8,4},
+        {STAGE_ISLAND,"ISLAND",0xFF46545A,0xFF555B60,0xFF8B9A9C,24.0f,10,5}
     };
     static const float sx[6]={-8,-3,4,9,-10,2};
     static const float sz[6]={-9,-12,-8,3,8,10};

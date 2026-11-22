@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define NAV_INF 0x3fffffff
-#define NAV_HEAP_CAPACITY NAV_MAX_CELLS
+#define NAV_HEAP_CAPACITY (NAV_MAX_CELLS * 8 + 1)
 
 typedef struct {
     int cell;

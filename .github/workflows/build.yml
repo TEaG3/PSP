@@ -23,6 +23,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate optional 3D assets (Python)
+        run: python3 tools/validate_assets.py
+
       - name: Run gameplay unit tests
         run: |
           gcc -std=c99 -O2 -Wall -Wextra -Werror gameplay.c tests/gameplay_test.c -lm -o /tmp/gameplay-test
@@ -45,5 +48,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: RE4Proto-EBOOT
-          path: EBOOT.PBP
+          path: |
+            EBOOT.PBP
+            assets/
           if-no-files-found: error

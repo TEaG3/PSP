@@ -210,6 +210,27 @@ static void update_game(const SceCtrlData *pad) {
         if(gameplayBuyAmmo(&player_state,&weapons[selected_weapon],10,2))playSound(SFX_PICKUP);
     }
     gameplayUpdateCampaign(&campaign,enemies);
+    if(campaign.boss_active){
+        int i,alive=0,boss_found=0;
+        for(i=0;i<GAME_ENEMY_MAX;i++){
+            if(enemies[i].active){alive++;if(enemies[i].boss)boss_found=1;}
+        }
+        if(!boss_found && alive==0){
+            for(i=GAME_ENEMY_MAX-1;i>=0;i--)if(!enemies[i].active){
+                enemies[i].x=0.0f; enemies[i].z=12.0f; enemies[i].hp=18+campaign.stage*8;
+                enemies[i].speed=0.85f+campaign.stage*0.2f; enemies[i].active=1;
+                enemies[i].boss=1; enemies[i].state=ENEMY_ALERT; break;
+            }
+        } else if(boss_found==0 && alive==0){
+            if(campaign.stage<STAGE_ISLAND){
+                campaign.stage++;
+                campaign.boss_active=0;
+                gameplayLoadStage((StageId)campaign.stage,&current_stage,enemies);
+            } else {
+                campaign.objective=campaign.objective_total;
+            }
+        }
+    }
     hp=player_state.hp; ammo=weapons[selected_weapon].mag; reserve_ammo=weapons[selected_weapon].reserve;
     if(pressed(buttons,PSP_CTRL_SELECT))save_current_game();
 }
@@ -314,6 +335,7 @@ static void render_scene(int aiming) {
     (void)snprintf(hud, sizeof(hud), "الصحة %d - النقاط %d - الذخيرة %d/%d - المال %d",
                    hp, score, ammo, reserve_ammo, player_state.money);
     arabicDrawTextRTL(472.0f, 8.0f, 0.72f, 0xFFFFFFFF, hud);
+    arabicDrawTextRTL(472.0f, 52.0f, 0.68f, 0xFFFFD080, current_stage.name);
     arabicDrawTextRTL(472.0f, 30.0f, 0.62f, 0xFFB8D8FF,
                       "L تصويب | مربع تلقيم | مثلث علاج | دائرة شراء ذخيرة");
     sceGuFinish();

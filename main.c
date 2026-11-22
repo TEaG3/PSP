@@ -322,6 +322,7 @@ static void draw_actor(ObjModel *model,Texture *texture,float x,float y,float z,
     if(model){
         sceGumPushMatrix();
         sceGumTranslate(&pos);sceGumRotateY(angle);sceGumScale(&size);
+        sceGuColor(0xFFFFFFFF);
         if(texture)bindTexture(texture);else sceGuDisable(GU_TEXTURE_2D);
         objDraw(model);
         sceGumPopMatrix();sceGuDisable(GU_TEXTURE_2D);

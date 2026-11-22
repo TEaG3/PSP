@@ -90,7 +90,7 @@ int gameplayFire(PlayerState *p, WeaponState *w, EnemyStateData enemies[GAME_ENE
     if(hit>=0){
         enemies[hit].hp-=w->damage;
         if(enemies[hit].hp<=0){p->money+=enemies[hit].boss?300:50;enemies[hit].hp=0;enemies[hit].active=0;enemies[hit].state=ENEMY_DEAD;}
-        else enemies[hit].state=ENEMY_STAGGER;
+        else {enemies[hit].state=ENEMY_STAGGER;enemies[hit].alert_frames=0;}
     }
     return hit;
 }
@@ -135,6 +135,11 @@ void gameplayUpdateCampaign(CampaignState *c,EnemyStateData enemies[GAME_ENEMY_M
     for(i=0;i<GAME_ENEMY_MAX;i++)if(enemies[i].active&&enemies[i].state!=ENEMY_DEAD)remaining++;
     c->defeated=GAME_ENEMY_MAX-remaining;
     if(remaining==0 && c->boss_active==0)c->boss_active=1;
+}
+void gameplaySetStage(CampaignState *c,StageId id){
+    c->stage=(int)id;c->objective=0;c->defeated=0;c->boss_active=0;
+    c->boss_hp=30+(int)id*15;
+    c->objective_total=3+(int)id;
 }
 int gameplayBossDamage(CampaignState *c,int damage){
     if(!c->boss_active||damage<=0)return 0;

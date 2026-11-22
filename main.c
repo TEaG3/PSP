@@ -210,25 +210,29 @@ static void update_game(const SceCtrlData *pad) {
         if(gameplayBuyAmmo(&player_state,&weapons[selected_weapon],10,2))playSound(SFX_PICKUP);
     }
     gameplayUpdateCampaign(&campaign,enemies);
-    if(campaign.boss_active){
-        int i,alive=0,boss_found=0;
-        for(i=0;i<GAME_ENEMY_MAX;i++){
-            if(enemies[i].active){alive++;if(enemies[i].boss)boss_found=1;}
-        }
-        if(!boss_found && alive==0){
+    if(campaign.boss_active==1){
+        int i,alive=0;
+        for(i=0;i<GAME_ENEMY_MAX;i++)if(enemies[i].active)alive++;
+        if(alive==0){
             for(i=GAME_ENEMY_MAX-1;i>=0;i--)if(!enemies[i].active){
-                enemies[i].x=0.0f; enemies[i].z=12.0f; enemies[i].hp=18+campaign.stage*8;
-                enemies[i].speed=0.85f+campaign.stage*0.2f; enemies[i].active=1;
-                enemies[i].boss=1; enemies[i].state=ENEMY_ALERT; break;
+                enemies[i].x=0.0f; enemies[i].z=12.0f;
+                enemies[i].hp=18+campaign.stage*8;
+                enemies[i].speed=0.85f+campaign.stage*0.2f;
+                enemies[i].active=1; enemies[i].boss=1;
+                enemies[i].state=ENEMY_ALERT;
+                campaign.boss_active=2;
+                break;
             }
-        } else if(boss_found==0 && alive==0){
+        }
+    } else if(campaign.boss_active==2){
+        int i,alive=0;
+        for(i=0;i<GAME_ENEMY_MAX;i++)if(enemies[i].active)alive++;
+        if(alive==0){
+            campaign.boss_active=0;
             if(campaign.stage<STAGE_ISLAND){
                 campaign.stage++;
-                campaign.boss_active=0;
                 gameplayLoadStage((StageId)campaign.stage,&current_stage,enemies);
-            } else {
-                campaign.objective=campaign.objective_total;
-            }
+            } else campaign.objective=campaign.objective_total;
         }
     }
     hp=player_state.hp; ammo=weapons[selected_weapon].mag; reserve_ammo=weapons[selected_weapon].reserve;

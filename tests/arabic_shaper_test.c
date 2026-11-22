@@ -6,8 +6,8 @@ static void test_arabic_forms(void) {
     uint32_t out[64]; int n;
     n=arabic_process_line("باب",out,64,1);
     assert(n==3);
-    assert(out[0]==0xFE90); /* final beh */
-    assert(out[1]==0xFE8D); /* alef */
+    assert(out[0]==0xFE8F); /* isolated beh */
+    assert(out[1]==0xFE8E); /* final alef */
     assert(out[2]==0xFE91); /* initial beh */
 }
 static void test_lam_alef_variants(void) {

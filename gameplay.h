@@ -56,6 +56,7 @@ int gameplayBuyWeapon(PlayerState *p, WeaponState weapons[GAME_WEAPON_MAX], Weap
 int gameplayUpgradeWeapon(PlayerState *p, WeaponState *weapon, int price);
 int gameplayUseHealth(PlayerState *p, InventoryState *bag);
 void gameplayUpdateCampaign(CampaignState *c, EnemyStateData enemies[GAME_ENEMY_MAX]);
+void gameplaySetStage(CampaignState *c, StageId id);
 int gameplayBossDamage(CampaignState *c, int damage);
 
 #endif

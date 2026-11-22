@@ -26,7 +26,9 @@ static int valid_state(const GameState *s) {
         s->selected_weapon < 0 || s->selected_weapon > 2 ||
         s->health_items < 0 || s->health_items > 99 ||
         s->objective < 0 || s->objective > 99 ||
-        s->boss_active < 0 || s->boss_active > 2) return 0;
+        s->boss_active < 0 || s->boss_active > 2 ||
+        s->defeated < 0 || s->defeated > 10 || s->boss_hp < 0 || s->boss_hp > 300 ||
+        s->completed < 0 || s->completed > 1) return 0;
     for (i=0;i<3;i++) {
         int cap = (i==0)?10:((i==1)?6:20);
         if (s->weapon_mag[i] < 0 || s->weapon_mag[i] > cap ||
@@ -97,7 +99,7 @@ int loadGame(GameState *state) {
         copy.hp=old.hp;copy.score=old.score;copy.ammo=old.ammo;copy.reserve_ammo=old.reserve_ammo;
         copy.stage=0;copy.money=300;copy.selected_weapon=0;
         copy.weapon_mag[0]=old.ammo;copy.weapon_reserve[0]=old.reserve_ammo;
-        copy.weapon_damage[0]=1;copy.weapon_owned[0]=1;copy.health_items=1;
+        copy.weapon_damage[0]=1;copy.weapon_owned[0]=1;copy.health_items=1;copy.defeated=0;copy.boss_hp=30;copy.completed=0;
         if(!valid_state(&copy))return -1;
         *state=copy;return 0;
     }

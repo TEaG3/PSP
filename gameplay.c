@@ -89,7 +89,7 @@ int gameplayFire(PlayerState *p, WeaponState *w, EnemyStateData enemies[GAME_ENE
     }
     if(hit>=0){
         enemies[hit].hp-=w->damage;
-        if(enemies[hit].hp<=0){enemies[hit].hp=0;enemies[hit].active=0;enemies[hit].state=ENEMY_DEAD;}
+        if(enemies[hit].hp<=0){p->money+=enemies[hit].boss?300:50;enemies[hit].hp=0;enemies[hit].active=0;enemies[hit].state=ENEMY_DEAD;}
         else enemies[hit].state=ENEMY_STAGGER;
     }
     return hit;

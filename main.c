@@ -459,11 +459,11 @@ static void render_menu(void) {
     sceGuDisable(GU_DEPTH_TEST);
     sceGuDisable(GU_CULL_FACE);
     sceGuDisable(GU_TEXTURE_2D);
-    arabicDrawTextCenter(240.0f, 48.0f, 1.4f, 0xFFFFFFFF, "ريزيدنت إيفل 4");
-    arabicDrawTextCenter(240.0f, 94.0f, 1.0f, 0xFFB8D8FF, "القرية - القلعة - الجزيرة");
-    arabicDrawTextCenter(240.0f, 154.0f, 1.0f, 0xFFFFFFFF, "زر البدء لبدء اللعب");
-    arabicDrawTextCenter(240.0f, 184.0f, 0.9f, 0xFFFFFFFF, "زر الدائرة للخروج");
-    arabicDrawTextCenter(240.0f, 238.0f, 0.7f, 0xFFB0B8C0, "نسخة تطوير قيد الاختبار");
+    arabicDrawTextCenter(240.0f, 48.0f, 1.4f, 0xFFFFFFFF, "SURVIVAL PROTOCOL");
+    arabicDrawTextCenter(240.0f, 94.0f, 1.0f, 0xFFB8D8FF, "VILLAGE  -  CASTLE  -  ISLAND");
+    arabicDrawTextCenter(240.0f, 154.0f, 1.0f, 0xFFFFFFFF, "PRESS X TO START");
+    arabicDrawTextCenter(240.0f, 184.0f, 0.9f, 0xFFFFFFFF, "PRESS O TO EXIT");
+    arabicDrawTextCenter(240.0f, 238.0f, 0.7f, 0xFFB0B8C0, "DEVELOPMENT BUILD");
     sceGuFinish();
     sceGuSync(0, 0);
     sceGuSwapBuffers();
@@ -475,41 +475,41 @@ static void render_pause(void) {
     sceGuClear(GU_COLOR_BUFFER_BIT);
     sceGuDisable(GU_DEPTH_TEST);sceGuDisable(GU_CULL_FACE);sceGuDisable(GU_TEXTURE_2D);
     if(pause_mode==3){
-        arabicDrawTextCenter(240.0f,84.0f,1.35f,0xFFFFD080,"اكتملت الحملة");
-        arabicDrawTextCenter(240.0f,132.0f,0.92f,0xFFFFFFFF,"لقد أنهيت المراحل الثلاث");
-        arabicDrawTextCenter(240.0f,202.0f,0.82f,0xFFB8D8FF,"X أو O للعودة إلى القائمة الرئيسية");
+        arabicDrawTextCenter(240.0f,84.0f,1.35f,0xFFFFD080,"CAMPAIGN COMPLETE");
+        arabicDrawTextCenter(240.0f,132.0f,0.92f,0xFFFFFFFF,"ALL THREE STAGES CLEARED");
+        arabicDrawTextCenter(240.0f,202.0f,0.82f,0xFFB8D8FF,"PRESS X OR O TO RETURN TO MAIN MENU");
     } else if(pause_mode==4){
-        arabicDrawTextCenter(240.0f,84.0f,1.35f,0xFFFF8080,"انتهت المحاولة");
-        arabicDrawTextCenter(240.0f,132.0f,0.92f,0xFFFFFFFF,"تم حفظ آخر نقطة محفوظة");
-        arabicDrawTextCenter(240.0f,202.0f,0.82f,0xFFB8D8FF,"X أو O للعودة إلى القائمة الرئيسية");
+        arabicDrawTextCenter(240.0f,84.0f,1.35f,0xFFFF8080,"GAME OVER");
+        arabicDrawTextCenter(240.0f,132.0f,0.92f,0xFFFFFFFF,"YOUR LAST CHECKPOINT WAS SAVED");
+        arabicDrawTextCenter(240.0f,202.0f,0.82f,0xFFB8D8FF,"PRESS X OR O TO RETURN TO MAIN MENU");
     } else if(pause_mode==0){
-        arabicDrawTextCenter(240.0f,32.0f,1.15f,0xFFFFFFFF,"القائمة");
-        arabicDrawTextCenter(240.0f,66.0f,0.82f,0xFFFFFFFF,pause_selection==0?"> متابعة اللعب":"متابعة اللعب");
-        arabicDrawTextCenter(240.0f,96.0f,0.82f,0xFFFFFFFF,pause_selection==1?"> حفظ التقدم":"حفظ التقدم");
-        arabicDrawTextCenter(240.0f,126.0f,0.82f,0xFFFFFFFF,pause_selection==2?"> التاجر":"التاجر");
-        arabicDrawTextCenter(240.0f,156.0f,0.82f,0xFFFFFFFF,pause_selection==3?"> المخزون":"المخزون");
-        arabicDrawTextCenter(240.0f,186.0f,0.82f,0xFFFFFFFF,pause_selection==4?"> القائمة الرئيسية":"القائمة الرئيسية");
-        arabicDrawTextCenter(240.0f,238.0f,0.68f,0xFFB8D8FF,"الاتجاهات للاختيار - X للتأكيد - O للعودة");
+        arabicDrawTextCenter(240.0f,32.0f,1.15f,0xFFFFFFFF,"PAUSE MENU");
+        arabicDrawTextCenter(240.0f,66.0f,0.82f,0xFFFFFFFF,pause_selection==0?"> RESUME":"RESUME");
+        arabicDrawTextCenter(240.0f,96.0f,0.82f,0xFFFFFFFF,pause_selection==1?"> SAVE GAME":"SAVE GAME");
+        arabicDrawTextCenter(240.0f,126.0f,0.82f,0xFFFFFFFF,pause_selection==2?"> MERCHANT":"MERCHANT");
+        arabicDrawTextCenter(240.0f,156.0f,0.82f,0xFFFFFFFF,pause_selection==3?"> INVENTORY":"INVENTORY");
+        arabicDrawTextCenter(240.0f,186.0f,0.82f,0xFFFFFFFF,pause_selection==4?"> PAUSE MENU الرئيسية":"PAUSE MENU الرئيسية");
+        arabicDrawTextCenter(240.0f,238.0f,0.68f,0xFFB8D8FF,"D-PAD: SELECT   X: CONFIRM   O: BACK");
     } else if(pause_mode==1){
-        arabicDrawTextCenter(240.0f,25.0f,1.1f,0xFFFFD080,"التاجر");
+        arabicDrawTextCenter(240.0f,25.0f,1.1f,0xFFFFD080,"MERCHANT");
         {
             char money[64];
-            (void)snprintf(money,sizeof(money),"رصيدك: %d",player_state.money);
+            (void)snprintf(money,sizeof(money),"CASH: %d",player_state.money);
             arabicDrawTextCenter(240.0f,53.0f,0.75f,0xFFFFFFFF,money);
         }
-        arabicDrawTextCenter(240.0f,85.0f,0.78f,0xFFFFFFFF,merchant_selection==0?"> شراء 10 طلقات - 20":"شراء 10 طلقات - 20");
-        arabicDrawTextCenter(240.0f,115.0f,0.78f,0xFFFFFFFF,merchant_selection==1?"> شراء علاج - 120":"شراء علاج - 120");
-        arabicDrawTextCenter(240.0f,145.0f,0.78f,0xFFFFFFFF,merchant_selection==2?"> شراء بندقية خرطوش - 800":"شراء بندقية خرطوش - 800");
-        arabicDrawTextCenter(240.0f,175.0f,0.78f,0xFFFFFFFF,merchant_selection==3?"> شراء بندقية - 1200":"شراء بندقية - 1200");
-        arabicDrawTextCenter(240.0f,205.0f,0.78f,0xFFFFFFFF,merchant_selection==4?"> ترقية السلاح الحالي - 250":"ترقية السلاح الحالي - 250");
-        arabicDrawTextCenter(240.0f,237.0f,0.72f,0xFFB8D8FF,merchant_selection==5?"> رجوع":"رجوع - O للعودة");
+        arabicDrawTextCenter(240.0f,85.0f,0.78f,0xFFFFFFFF,merchant_selection==0?"> BUY 10 AMMO - 20":"BUY 10 AMMO - 20");
+        arabicDrawTextCenter(240.0f,115.0f,0.78f,0xFFFFFFFF,merchant_selection==1?"> BUY MEDKIT - 120":"BUY MEDKIT - 120");
+        arabicDrawTextCenter(240.0f,145.0f,0.78f,0xFFFFFFFF,merchant_selection==2?"> BUY SHOTGUN - 800":"BUY SHOTGUN - 800");
+        arabicDrawTextCenter(240.0f,175.0f,0.78f,0xFFFFFFFF,merchant_selection==3?"> BUY RIFLE - 1200":"BUY RIFLE - 1200");
+        arabicDrawTextCenter(240.0f,205.0f,0.78f,0xFFFFFFFF,merchant_selection==4?"> UPGRADE WEAPON - 250":"UPGRADE WEAPON - 250");
+        arabicDrawTextCenter(240.0f,237.0f,0.72f,0xFFB8D8FF,merchant_selection==5?"> BACK":"BACK - PRESS O");
     } else {
         char item[80];
-        arabicDrawTextCenter(240.0f,36.0f,1.1f,0xFFFFFFFF,"المخزون");
-        (void)snprintf(item,sizeof(item),"العلاج المتوفر: %d",inventory.amount[ITEM_HEALTH]);
+        arabicDrawTextCenter(240.0f,36.0f,1.1f,0xFFFFFFFF,"INVENTORY");
+        (void)snprintf(item,sizeof(item),"MEDKITS: %d",inventory.amount[ITEM_HEALTH]);
         arabicDrawTextCenter(240.0f,90.0f,0.9f,0xFFFFFFFF,item);
-        arabicDrawTextCenter(240.0f,140.0f,0.85f,0xFFFFFFFF,"X لاستخدام العلاج");
-        arabicDrawTextCenter(240.0f,190.0f,0.8f,0xFFB8D8FF,"O للعودة");
+        arabicDrawTextCenter(240.0f,140.0f,0.85f,0xFFFFFFFF,"PRESS X TO USE MEDKIT");
+        arabicDrawTextCenter(240.0f,190.0f,0.8f,0xFFB8D8FF,"O: BACK");
     }
     sceGuFinish();sceGuSync(0,0);sceGuSwapBuffers();
 }
@@ -636,15 +636,15 @@ static void render_scene(int aiming) {
     sceGuDisable(GU_DEPTH_TEST);
     sceGuDisable(GU_CULL_FACE);
     sceGuDisable(GU_TEXTURE_2D);
-    (void)snprintf(hud, sizeof(hud), "الصحة %d - النقاط %d - الذخيرة %d/%d - المال %d",
+    (void)snprintf(hud, sizeof(hud), "HP %d  |  SCORE %d  |  AMMO %d/%d  |  CASH %d",
                    hp, score, ammo, reserve_ammo, player_state.money);
     arabicDrawTextRTL(472.0f, 8.0f, 0.72f, 0xFFFFFFFF, hud);
     arabicDrawTextRTL(472.0f, 52.0f, 0.68f, 0xFFFFD080, current_stage.name);
-    (void)snprintf(hud,sizeof(hud),"المهمة %d/%d - الأعداء %d/%d",campaign.objective,campaign.objective_total,campaign.defeated,current_stage.enemy_total);
+    (void)snprintf(hud,sizeof(hud),"OBJECTIVE %d/%d  |  ENEMIES %d/%d",campaign.objective,campaign.objective_total,campaign.defeated,current_stage.enemy_total);
     arabicDrawTextRTL(472.0f,74.0f,0.62f,0xFFFFFFFF,hud);
-    if(hit_flash_frames>0)arabicDrawTextCenter(240.0f,104.0f,0.9f,0xFFFF7777,"أُصيب اللاعب");
+    if(hit_flash_frames>0)arabicDrawTextCenter(240.0f,104.0f,0.9f,0xFFFF7777,"PLAYER HIT");
     arabicDrawTextRTL(472.0f, 30.0f, 0.62f, 0xFFB8D8FF,
-                      "L تصويب | مربع تلقيم | مثلث علاج | L+مثلث ترقية | دائرة ذخيرة | L+دائرة سلاح");
+                      "L: AIM  |  SQUARE: RELOAD  |  TRIANGLE: HEAL  |  L+TRIANGLE: UPGRADE  |  CIRCLE: FIRE  |  L+CIRCLE: SWITCH");
     sceGuFinish();
     sceGuSync(0, 0);
     sceGuSwapBuffers();

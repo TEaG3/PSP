@@ -489,7 +489,7 @@ static void render_pause(void) {
         arabicDrawTextCenter(240.0f,96.0f,0.82f,0xFFFFFFFF,pause_selection==1?"> SAVE GAME":"SAVE GAME");
         arabicDrawTextCenter(240.0f,126.0f,0.82f,0xFFFFFFFF,pause_selection==2?"> MERCHANT":"MERCHANT");
         arabicDrawTextCenter(240.0f,156.0f,0.82f,0xFFFFFFFF,pause_selection==3?"> INVENTORY":"INVENTORY");
-        arabicDrawTextCenter(240.0f,186.0f,0.82f,0xFFFFFFFF,pause_selection==4?"> PAUSE MENU الرئيسية":"PAUSE MENU الرئيسية");
+        arabicDrawTextCenter(240.0f,186.0f,0.82f,0xFFFFFFFF,pause_selection==4?"> MAIN MENU":"MAIN MENU");
         arabicDrawTextCenter(240.0f,238.0f,0.68f,0xFFB8D8FF,"D-PAD: SELECT   X: CONFIRM   O: BACK");
     } else if(pause_mode==1){
         arabicDrawTextCenter(240.0f,25.0f,1.1f,0xFFFFD080,"MERCHANT");

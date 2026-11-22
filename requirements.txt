@@ -1,0 +1,12 @@
+# RE4 Proto - PSP build requirements
+# Toolchain: PSPDEV / PSPSDK (psp-gcc, psp-config, make)
+# Recommended environment: GitHub Codespaces or VS Code Dev Container
+# Container image: pspdev/pspdev:latest
+# External single-header dependency (downloaded by devcontainer postCreateCommand):
+# https://raw.githubusercontent.com/nothings/stb/master/stb_image.h
+# Build:
+#   make check-deps
+#   make
+# Output:
+#   EBOOT.PBP
+# Runtime targets: PPSSPP and a homebrew-capable PSP.

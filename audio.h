@@ -7,7 +7,9 @@
 #define SFX_EMPTY   3
 #define SFX_PICKUP  4
 #define SFX_HURT    5
-#define NUM_SFX     6
+#define SFX_STAGE   6
+#define SFX_BOSS    7
+#define NUM_SFX     8
 
 void initAudio(void);
 void playSound(int sfx_id);

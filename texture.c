@@ -65,7 +65,7 @@ done:
 void bindTexture(Texture *tex) {
     if (!tex || !tex->data) { sceGuDisable(GU_TEXTURE_2D); return; }
     sceGuEnable(GU_TEXTURE_2D);
-    sceGuTexMode(GU_PSM_8888, 0, 0, GU_TRUE);
+    sceGuTexMode(GU_PSM_8888, 0, 0, GU_FALSE);
     sceGuTexImage(0, tex->width, tex->height, tex->width, tex->data);
     sceGuTexFunc(GU_TFX_MODULATE, GU_TCC_RGBA);
     sceGuTexFilter(GU_LINEAR, GU_LINEAR);

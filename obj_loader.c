@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <string.h>
+#include <limits.h>
+#include <stdint.h>
 
 typedef struct {
     float u, v;
@@ -24,8 +26,13 @@ static int grow(void **ptr, size_t *capacity, size_t needed, size_t itemSize) {
     size_t next;
     void *tmp;
     if (needed <= *capacity) return 1;
+    if (itemSize == 0 || needed > SIZE_MAX / itemSize) return 0;
     next = *capacity ? *capacity : 64;
-    while (next < needed) next *= 2;
+    while (next < needed) {
+        if (next > SIZE_MAX / 2) { next = needed; break; }
+        next *= 2;
+    }
+    if (next > SIZE_MAX / itemSize) return 0;
     tmp = realloc(*ptr, next * itemSize);
     if (!tmp) return 0;
     *ptr = tmp;
@@ -79,14 +86,20 @@ ObjModel *objLoad(const char *objPath) {
         } else if (line[0] == 'f' && line[1] == ' ') {
             char *save = NULL, *tok;
             ObjVertex face[64];
-            int count = 0, i;
+            int count = 0, i, valid = 1;
             tok = strtok_r(line + 2, " \t\r\n", &save);
-            while (tok && count < 64) {
+            while (tok) {
                 int vi, ti, pi, ui;
-                if (!parse_face_ref(tok, &vi, &ti)) break;
+                if (count >= 64 || !parse_face_ref(tok, &vi, &ti)) {
+                    valid = 0;
+                    break;
+                }
                 pi = obj_index(vi, (int)pc);
                 ui = ti ? obj_index(ti, (int)uc) : -1;
-                if (pi < 0 || pi >= (int)pc || (ti && (ui < 0 || ui >= (int)uc))) break;
+                if (pi < 0 || pi >= (int)pc || (ti && (ui < 0 || ui >= (int)uc))) {
+                    valid = 0;
+                    break;
+                }
                 face[count].x = positions[pi].x;
                 face[count].y = positions[pi].y;
                 face[count].z = positions[pi].z;
@@ -95,9 +108,15 @@ ObjModel *objLoad(const char *objPath) {
                 ++count;
                 tok = strtok_r(NULL, " \t\r\n", &save);
             }
-            for (i = 1; i + 1 < count; ++i) {
-                if (!grow((void **)&out, &ocap, oc + 3, sizeof(ObjVertex))) goto done;
-                out[oc++] = face[0]; out[oc++] = face[i]; out[oc++] = face[i + 1];
+            if (valid && count >= 3) {
+                for (i = 1; i + 1 < count; ++i) {
+                    if (oc > (size_t)INT_MAX - 3 ||
+                        !grow((void **)&out, &ocap, oc + 3, sizeof(ObjVertex)))
+                        goto done;
+                    out[oc++] = face[0];
+                    out[oc++] = face[i];
+                    out[oc++] = face[i + 1];
+                }
             }
         }
     }
@@ -118,7 +137,6 @@ done:
 
 void objDraw(ObjModel *model) {
     if (!model || !model->vertices || model->vertexCount <= 0) return;
-    sceGuEnable(GU_TEXTURE_2D);
     sceGuDrawArray(GU_TRIANGLES,
         GU_TEXTURE_32BITF | GU_VERTEX_32BITF | GU_TRANSFORM_3D,
         model->vertexCount, NULL, model->vertices);

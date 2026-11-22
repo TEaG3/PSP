@@ -54,6 +54,8 @@ void gameplayLoadStage(StageId id, StageData *s, EnemyStateData enemies[GAME_ENE
 
 void gameplayUpdateEnemies(PlayerState *p, EnemyStateData enemies[GAME_ENEMY_MAX], float dt) {
     int i;
+    if(!p || !enemies || !isfinite(dt) || dt<=0.0f) return;
+    if(dt>0.1f) dt=0.1f;
     for(i=0;i<GAME_ENEMY_MAX;i++){
         EnemyStateData *e=&enemies[i]; float dx,dz,d,desired,step;
         if(!e->active||e->state==ENEMY_DEAD)continue;
@@ -78,7 +80,9 @@ void gameplayUpdateEnemies(PlayerState *p, EnemyStateData enemies[GAME_ENEMY_MAX
 int gameplayFire(PlayerState *p, WeaponState *w, EnemyStateData enemies[GAME_ENEMY_MAX],
                  int count,float range,float tolerance) {
     int i,hit=-1; float best=range;
-    if(!w||!w->owned||w->mag<=0||p->reloading)return -1;
+    if(!p || !w || !enemies || count<=0 || !isfinite(range) ||
+       !isfinite(tolerance) || range<=0.0f || tolerance<=0.0f ||
+       !w->owned || w->mag<=0 || p->reloading) return -1;
     w->mag--;
     for(i=0;i<count&&i<GAME_ENEMY_MAX;i++){
         EnemyStateData *e=&enemies[i]; float dx,dz,d,a;
@@ -96,57 +100,66 @@ int gameplayFire(PlayerState *p, WeaponState *w, EnemyStateData enemies[GAME_ENE
 }
 
 int gameplayReload(PlayerState *p,WeaponState *w){
-    if(!w||!w->owned||p->reloading||w->mag>=w->capacity||w->reserve<=0)return 0;
+    if(!p || !w || !w->owned || p->reloading ||
+       w->capacity<=0 || w->mag<0 || w->reserve<=0 ||
+       w->mag>=w->capacity) return 0;
     p->reloading=1;p->reload_frames=45;p->anim=PLAYER_RELOAD;return 1;
 }
 void gameplayUpdateReload(PlayerState *p,WeaponState *w){
     int need,take;
-    if(!p->reloading)return;
-    if(--p->reload_frames>0)return;
+    if(!p || !w || !p->reloading) return;
+    if(p->reload_frames>0 && --p->reload_frames>0) return;
     need=w->capacity-w->mag;take=need<w->reserve?need:w->reserve;
     w->mag+=take;w->reserve-=take;p->reloading=0;p->anim=PLAYER_IDLE;
 }
 int gameplayBuyAmmo(PlayerState *p,WeaponState *w,int amount,int price){
     int cost;
-    if(!w||!w->owned||amount<=0||price<=0)return 0;
-    cost=amount*price;if(p->money<cost)return 0;
+    if(!p || !w || !w->owned || amount<=0 || price<=0 ||
+       amount>2147483647/price || w->reserve<0 ||
+       w->reserve>2147483647-amount) return 0;
+    cost=amount*price;
+    if(p->money<cost) return 0;
     p->money-=cost;w->reserve+=amount;return 1;
 }
 int gameplayBuyHealth(PlayerState *p,InventoryState *b,int price){
-    if(p->money<price||price<=0)return 0;
+    if(!p || !b || price<=0 || p->money<price ||
+       b->amount[ITEM_HEALTH]<0 || b->amount[ITEM_HEALTH]>=99) return 0;
     p->money-=price;b->amount[ITEM_HEALTH]++;return 1;
 }
 int gameplayBuyWeapon(PlayerState *p,WeaponState weapons[GAME_WEAPON_MAX],WeaponId id){
     WeaponState *w;
-    if(id<WEAPON_HANDGUN||id>=GAME_WEAPON_MAX)return 0;
+    if(!p || !weapons || id<WEAPON_HANDGUN || id>=GAME_WEAPON_MAX) return 0;
     w=&weapons[id]; if(w->owned||p->money<w->price)return 0;
     p->money-=w->price;w->owned=1;w->mag=w->capacity;w->reserve=w->capacity*3;return 1;
 }
 int gameplayUpgradeWeapon(PlayerState *p,WeaponState *w,int price){
-    if(!w||!w->owned||price<=0||p->money<price||w->damage>=8)return 0;
+    if(!p || !w || !w->owned || price<=0 || p->money<price ||
+       w->damage<0 || w->damage>=8) return 0;
     p->money-=price;w->damage++;return 1;
 }
 int gameplayUseHealth(PlayerState *p,InventoryState *b){
-    if(b->amount[ITEM_HEALTH]<=0||p->hp>=100)return 0;
+    if(!p || !b || b->amount[ITEM_HEALTH]<=0 || p->hp>=100) return 0;
     b->amount[ITEM_HEALTH]--;p->hp+=40;if(p->hp>100)p->hp=100;return 1;
 }
 void gameplayUpdateCampaign(CampaignState *c,EnemyStateData enemies[GAME_ENEMY_MAX]){
     int i,remaining=0;
-    if(c->completed)return;
+    if(!c || !enemies || c->completed) return;
     for(i=0;i<GAME_ENEMY_MAX;i++)if(enemies[i].active&&enemies[i].state!=ENEMY_DEAD)remaining++;
     if(c->boss_active==0){
         c->defeated=c->stage_total-remaining;
         if(c->defeated<0)c->defeated=0;
-        c->objective=(c->defeated*c->objective_total)/c->stage_total;
+        c->objective=(c->stage_total>0 && c->objective_total>0)
+        ? (c->defeated*c->objective_total)/c->stage_total : 0;
         if(remaining==0)c->boss_active=1;
     }
 }
 void gameplaySetStage(CampaignState *c,StageId id){
+    if(!c || id<STAGE_VILLAGE || id>STAGE_ISLAND) return;
     c->stage=(int)id;c->objective=0;c->defeated=0;c->boss_active=0;
     c->boss_hp=30+(int)id*15;c->completed=0;
     c->objective_total=3+(int)id;c->stage_total=6+(int)id*2;
 }
 int gameplayBossDamage(CampaignState *c,int damage){
-    if(!c->boss_active||damage<=0)return 0;
+    if(!c || c->boss_active!=2 || damage<=0) return 0;
     c->boss_hp-=damage;if(c->boss_hp<=0){c->boss_hp=0;c->boss_active=0;return 1;}return 0;
 }

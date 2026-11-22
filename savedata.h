@@ -25,6 +25,9 @@ typedef struct {
     int health_items;
     int objective;
     int boss_active;
+    int defeated;
+    int boss_hp;
+    int completed;
 } GameState;
 
 int saveGame(const GameState *state);

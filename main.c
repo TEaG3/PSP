@@ -40,6 +40,8 @@ static InventoryState inventory;
 static CampaignState campaign;
 static StageData current_stage;
 static int selected_weapon = WEAPON_HANDGUN;
+static int pause_mode, pause_selection, merchant_selection, inventory_selection;
+static int animation_frame, muzzle_flash_frames, hit_flash_frames, player_previous_hp;
 
 static const ColorVertex cube_vertices[] = {
     {0xFF4D8C35,-0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f, 0.5f, 0.5f},
@@ -90,6 +92,14 @@ static void save_current_game(void) {
     state.score = score;
     state.ammo = ammo;
     state.reserve_ammo = reserve_ammo;
+    state.stage = campaign.stage; state.money = player_state.money;
+    state.selected_weapon = selected_weapon;
+    state.health_items = inventory.amount[ITEM_HEALTH];
+    state.objective = campaign.objective; state.boss_active = campaign.boss_active;
+    { int i; for(i=0;i<GAME_WEAPON_MAX;i++) {
+        state.weapon_mag[i]=weapons[i].mag; state.weapon_reserve[i]=weapons[i].reserve;
+        state.weapon_damage[i]=weapons[i].damage; state.weapon_owned[i]=weapons[i].owned;
+    }}
     (void)saveGame(&state);
 }
 
@@ -104,6 +114,7 @@ static void reset_game(void) {
     reserve_ammo = 40;
     gameplayInit(&player_state, enemies, weapons, &inventory, &campaign);
     gameplayLoadStage(STAGE_VILLAGE, &current_stage, enemies);
+    gameplaySetStage(&campaign,STAGE_VILLAGE);
     player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
     if (loadGame(&saved) == 0) {
         player_x = saved.player_x;
@@ -116,8 +127,21 @@ static void reset_game(void) {
         player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
         player_state.hp=hp; weapons[WEAPON_HANDGUN].mag=ammo;
         weapons[WEAPON_HANDGUN].reserve=reserve_ammo;
+        { int i;
+          if(saved.stage>=STAGE_VILLAGE && saved.stage<=STAGE_ISLAND){
+              gameplayLoadStage((StageId)saved.stage,&current_stage,enemies);
+              gameplaySetStage(&campaign,(StageId)saved.stage);
+          }
+          player_state.money=saved.money; selected_weapon=saved.selected_weapon;
+          inventory.amount[ITEM_HEALTH]=saved.health_items;
+          campaign.objective=saved.objective; campaign.boss_active=saved.boss_active;
+          for(i=0;i<GAME_WEAPON_MAX;i++){
+              weapons[i].mag=saved.weapon_mag[i];weapons[i].reserve=saved.weapon_reserve[i];
+              weapons[i].damage=saved.weapon_damage[i];weapons[i].owned=saved.weapon_owned[i];
+          }
+        }
     }
-    paused = 0;
+    paused = 0; pause_mode=0; pause_selection=0;
     game_started = 1;
 }
 

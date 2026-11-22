@@ -42,6 +42,7 @@ static InventoryState inventory;
 static CampaignState campaign;
 static StageData current_stage;
 static NavGrid stage_nav_grid;
+static void rebuild_stage_navigation(void);
 static int selected_weapon = WEAPON_HANDGUN;
 static int pause_mode, pause_selection, merchant_selection, inventory_selection;
 static int animation_frame, muzzle_flash_frames, hit_flash_frames, player_previous_hp;

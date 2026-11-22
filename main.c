@@ -205,6 +205,55 @@ static void draw_local_box(float x,float y,float z,float sx,float sy,float sz,fl
     sceGumPopMatrix();
 }
 
+typedef struct { float x, z, hx, hz; } WorldBlock;
+static int circle_hits_block(float x,float z,float radius,const WorldBlock *b) {
+    float nx=x<b->x-b->hx?b->x-b->hx:(x>b->x+b->hx?b->x+b->hx:x);
+    float nz=z<b->z-b->hz?b->z-b->hz:(z>b->z+b->hz?b->z+b->hz:z);
+    float dx=x-nx,dz=z-nz;
+    return dx*dx+dz*dz<radius*radius;
+}
+static int world_blocked(float x,float z,float radius) {
+    WorldBlock blocks[12]; int n=0,i;
+    if(current_stage.id==STAGE_VILLAGE) {
+        blocks[n++]=(WorldBlock){-9.0f,7.0f,2.2f,1.75f};
+        blocks[n++]=(WorldBlock){0.0f,7.0f,2.2f,1.75f};
+        blocks[n++]=(WorldBlock){9.0f,7.0f,2.2f,1.75f};
+        blocks[n++]=(WorldBlock){-12.0f,-9.0f,0.8f,0.8f};
+        blocks[n++]=(WorldBlock){-6.0f,-9.0f,0.8f,0.8f};
+        blocks[n++]=(WorldBlock){0.0f,-9.0f,0.8f,0.8f};
+        blocks[n++]=(WorldBlock){6.0f,-9.0f,0.8f,0.8f};
+        blocks[n++]=(WorldBlock){12.0f,-9.0f,0.8f,0.8f};
+    } else if(current_stage.id==STAGE_CASTLE) {
+        blocks[n++]=(WorldBlock){-9.0f,0.0f,1.4f,1.4f};
+        blocks[n++]=(WorldBlock){9.0f,0.0f,1.4f,1.4f};
+        blocks[n++]=(WorldBlock){-16.0f,-current_stage.limit+1.0f,1.1f,1.1f};
+        blocks[n++]=(WorldBlock){-8.0f,-current_stage.limit+1.0f,1.1f,1.1f};
+        blocks[n++]=(WorldBlock){0.0f,-current_stage.limit+1.0f,1.1f,1.1f};
+        blocks[n++]=(WorldBlock){8.0f,-current_stage.limit+1.0f,1.1f,1.1f};
+        blocks[n++]=(WorldBlock){16.0f,-current_stage.limit+1.0f,1.1f,1.1f};
+    } else {
+        blocks[n++]=(WorldBlock){-12.0f,0.0f,1.75f,1.75f};
+        blocks[n++]=(WorldBlock){12.0f,0.0f,1.75f,1.75f};
+        blocks[n++]=(WorldBlock){-14.0f,-8.0f,1.4f,1.4f};
+        blocks[n++]=(WorldBlock){-7.0f,-8.0f,1.4f,1.4f};
+        blocks[n++]=(WorldBlock){0.0f,-8.0f,1.4f,1.4f};
+        blocks[n++]=(WorldBlock){7.0f,-8.0f,1.4f,1.4f};
+        blocks[n++]=(WorldBlock){14.0f,-8.0f,1.4f,1.4f};
+    }
+    for(i=0;i<n;i++) if(circle_hits_block(x,z,radius,&blocks[i])) return 1;
+    return 0;
+}
+static void move_player(float dx,float dz) {
+    float nx=player_x+dx,nz=player_z+dz,limit=current_stage.limit-0.65f;
+    if(nx>limit)nx=limit;if(nx<-limit)nx=-limit;
+    if(nz>limit)nz=limit;if(nz<-limit)nz=-limit;
+    /* Axis-separated resolution keeps the player sliding along walls. */
+    if(!world_blocked(nx,player_z,0.42f))player_x=nx;
+    if(!world_blocked(player_x,nz,0.42f))player_z=nz;
+}
+static float camera_x,camera_y=3.8f,camera_z;
+static int camera_ready;
+
 static void draw_stage_environment(void) {
     int i;
     float edge=current_stage.limit;
@@ -270,25 +319,26 @@ static void draw_actor(ObjModel *model,Texture *texture,float x,float y,float z,
 }
 
 static void update_game(const SceCtrlData *pad) {
-    float move=0.0f;
+    float move=0.0f, turn=0.0f, step;
     unsigned int buttons=pad->Buttons;
     int hit;
     if(pressed(buttons,PSP_CTRL_START)){paused=1;pause_mode=0;return;}
     if(!(buttons&PSP_CTRL_LTRIGGER)){
-        if(buttons&PSP_CTRL_LEFT)player_angle-=0.045f;
-        if(buttons&PSP_CTRL_RIGHT)player_angle+=0.045f;
+        if(buttons&PSP_CTRL_LEFT)turn-=0.045f;
+        if(buttons&PSP_CTRL_RIGHT)turn+=0.045f;
     }
-    if(buttons&PSP_CTRL_UP)move=(buttons&PSP_CTRL_RTRIGGER)?0.09f:0.055f;
-    if(buttons&PSP_CTRL_DOWN)move=-0.045f;
-    if(pad->Lx>150)player_angle+=0.035f;
-    else if(pad->Lx<105)player_angle-=0.035f;
-    if(pad->Ly<110)move=(buttons&PSP_CTRL_RTRIGGER)?0.09f:0.055f;
-    else if(pad->Ly>145)move=-0.045f;
-    player_x+=sinf(player_angle)*move; player_z+=cosf(player_angle)*move;
-    if(player_x>current_stage.limit)player_x=current_stage.limit;
-    if(player_x<-current_stage.limit)player_x=-current_stage.limit;
-    if(player_z>current_stage.limit)player_z=current_stage.limit;
-    if(player_z<-current_stage.limit)player_z=-current_stage.limit;
+    if(pad->Lx>150)turn+=((float)pad->Lx-150.0f)/105.0f*0.055f;
+    else if(pad->Lx<105)turn-=((105.0f-(float)pad->Lx)/105.0f)*0.055f;
+    player_angle+=turn;
+    if(player_angle>3.14159265f)player_angle-=6.2831853f;
+    if(player_angle<-3.14159265f)player_angle+=6.2831853f;
+    if(buttons&PSP_CTRL_UP)move=1.0f;
+    if(buttons&PSP_CTRL_DOWN)move=-0.72f;
+    if(pad->Ly<110)move=-((110.0f-(float)pad->Ly)/110.0f);
+    else if(pad->Ly>145)move=( (float)pad->Ly-145.0f)/110.0f;
+    if(move>1.0f)move=1.0f;if(move<-1.0f)move=-1.0f;
+    step=(buttons&PSP_CTRL_RTRIGGER)?0.105f:0.065f;
+    move_player(sinf(player_angle)*move*step,cosf(player_angle)*move*step);
     player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
     player_state.aiming=(buttons&PSP_CTRL_LTRIGGER)!=0;
     player_state.anim=player_state.reloading?PLAYER_RELOAD:
@@ -501,14 +551,20 @@ static void draw_aim_line(void) {
 
 static void render_scene(int aiming) {
     int i;
-    ScePspFVector3 camera = {
-        player_x - sinf(player_angle) * (aiming ? 3.5f : 5.8f) + cosf(player_angle)*0.9f,
-        aiming ? 2.6f : 3.8f,
-        player_z - cosf(player_angle) * (aiming ? 3.5f : 5.8f) - sinf(player_angle)*0.9f
-    };
-    ScePspFVector3 target = {player_x, 1.0f, player_z};
+    float desired_x=player_x-sinf(player_angle)*(aiming?3.15f:5.35f)+cosf(player_angle)*0.82f;
+    float desired_y=aiming?2.45f:3.45f;
+    float desired_z=player_z-cosf(player_angle)*(aiming?3.15f:5.35f)-sinf(player_angle)*0.82f;
+    float camera_lerp=aiming?0.22f:0.14f;
+    ScePspFVector3 camera;
+    ScePspFVector3 target = {player_x+sinf(player_angle)*1.15f, 1.12f, player_z+cosf(player_angle)*1.15f};
     ScePspFVector3 up = {0.0f, 1.0f, 0.0f};
     char hud[128];
+
+    if(!camera_ready){camera_x=desired_x;camera_y=desired_y;camera_z=desired_z;camera_ready=1;}
+    camera_x+=(desired_x-camera_x)*camera_lerp;
+    camera_y+=(desired_y-camera_y)*camera_lerp;
+    camera_z+=(desired_z-camera_z)*camera_lerp;
+    camera.x=camera_x;camera.y=camera_y;camera.z=camera_z;
 
     sceGuStart(GU_DIRECT, display_list);
     sceGuClearColor(current_stage.id==STAGE_CASTLE?0xFF252734:(current_stage.id==STAGE_ISLAND?0xFF35494F:0xFF293426));

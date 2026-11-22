@@ -113,6 +113,9 @@ static void reset_game(void) {
         score = saved.score;
         ammo = saved.ammo;
         reserve_ammo = saved.reserve_ammo;
+        player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
+        player_state.hp=hp; weapons[WEAPON_HANDGUN].mag=ammo;
+        weapons[WEAPON_HANDGUN].reserve=reserve_ammo;
     }
     paused = 0;
     game_started = 1;

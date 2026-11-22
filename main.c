@@ -15,7 +15,6 @@
 #include "gameplay.h"
 #include "navigation.h"
 #include "world_navigation.h"
-#include "enemy_navigation.h"
 
 PSP_MODULE_INFO("RE4 Proto", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
@@ -219,7 +218,6 @@ static int world_blocked(float x,float z,float radius) {
 }
 static void rebuild_stage_navigation(void) {
     worldNavBuild(current_stage.id,current_stage.limit,&stage_nav_grid);
-    enemyNavReset();
 }
 static void move_player(float dx,float dz) {
     float nx=player_x+dx,nz=player_z+dz,limit=current_stage.limit-0.65f;
@@ -353,7 +351,7 @@ static void update_game(const SceCtrlData *pad, float dt) {
                      ((buttons&PSP_CTRL_RTRIGGER)?PLAYER_RUN:PLAYER_WALK)));
     if(pressed(buttons,PSP_CTRL_SQUARE)&&gameplayReload(&player_state,&weapons[selected_weapon]))playSound(SFX_RELOAD);
     gameplayUpdateReload(&player_state,&weapons[selected_weapon]);
-    enemyNavUpdate(&player_state,enemies,&stage_nav_grid,(StageId)current_stage.id,current_stage.limit,dt);
+    gameplayUpdateEnemies(&player_state,enemies,dt);
     if(animation_frame<1000000)animation_frame++;
     if(muzzle_flash_frames>0)muzzle_flash_frames--;
     if(hit_flash_frames>0)hit_flash_frames--;

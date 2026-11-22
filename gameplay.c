@@ -60,6 +60,7 @@ void gameplayUpdateEnemies(PlayerState *p, EnemyStateData enemies[GAME_ENEMY_MAX
         dx=p->x-e->x; dz=p->z-e->z; d=sqrtf(dx*dx+dz*dz);
         if(e->attack_cooldown>0)e->attack_cooldown--;
         if(d<10.0f && e->state==ENEMY_IDLE)e->state=ENEMY_ALERT;
+        if(e->state==ENEMY_STAGGER){ if(++e->alert_frames>12){e->alert_frames=0;e->state=ENEMY_CHASE;} continue; }
         if(e->state==ENEMY_ALERT){ if(++e->alert_frames>20)e->state=ENEMY_CHASE; }
         if(e->state==ENEMY_CHASE||e->state==ENEMY_ATTACK){
             desired=atan2f(dx,dz); e->angle+=clampf(angle_delta(e->angle,desired),-2.8f*dt,2.8f*dt);

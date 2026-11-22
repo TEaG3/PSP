@@ -25,7 +25,7 @@ void gameplayInit(PlayerState *p, EnemyStateData enemies[GAME_ENEMY_MAX],
     weapons[WEAPON_SHOTGUN]=(WeaponState){0,0,6,3,0,800};
     weapons[WEAPON_RIFLE]=(WeaponState){0,0,20,2,0,1200};
     bag->amount[ITEM_HEALTH]=1;
-    campaign->stage=STAGE_VILLAGE; campaign->boss_hp=30;
+    campaign->stage=STAGE_VILLAGE; campaign->boss_hp=30; campaign->objective_total=3;
     for(i=0;i<GAME_ENEMY_MAX;i++) enemies[i].state=ENEMY_DEAD;
 }
 
@@ -122,9 +122,8 @@ int gameplayUseHealth(PlayerState *p,InventoryState *b){
 void gameplayUpdateCampaign(CampaignState *c,EnemyStateData enemies[GAME_ENEMY_MAX]){
     int i,remaining=0;
     for(i=0;i<GAME_ENEMY_MAX;i++)if(enemies[i].active&&enemies[i].state!=ENEMY_DEAD)remaining++;
-    c->defeated=0;
-    if(remaining==0&&c->objective<c->objective_total)c->objective++;
-    if(c->objective>=c->objective_total)c->boss_active=1;
+    c->defeated=GAME_ENEMY_MAX-remaining;
+    if(remaining==0)c->boss_active=1;
 }
 int gameplayBossDamage(CampaignState *c,int damage){
     if(!c->boss_active||damage<=0)return 0;

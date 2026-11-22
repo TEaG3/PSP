@@ -3,8 +3,10 @@
   "image": "pspdev/pspdev:latest",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-vscode.cpptools"]
+      "extensions": [
+        "ms-vscode.cpptools"
+      ]
     }
   },
-  "postCreateCommand": "curl -fsSL https://raw.githubusercontent.com/nothings/stb/master/stb_image.h -o stb_image.h && psp-config --version"
+  "postCreateCommand": "git clone --depth 1 https://github.com/nothings/stb.git /tmp/stb-image && cp /tmp/stb-image/stb_image.h ./stb_image.h && psp-config --version"
 }

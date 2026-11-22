@@ -133,13 +133,17 @@ int gameplayUseHealth(PlayerState *p,InventoryState *b){
 void gameplayUpdateCampaign(CampaignState *c,EnemyStateData enemies[GAME_ENEMY_MAX]){
     int i,remaining=0;
     for(i=0;i<GAME_ENEMY_MAX;i++)if(enemies[i].active&&enemies[i].state!=ENEMY_DEAD)remaining++;
-    c->defeated=GAME_ENEMY_MAX-remaining;
-    if(remaining==0 && c->boss_active==0)c->boss_active=1;
+    if(c->boss_active==0){
+        c->defeated=c->stage_total-remaining;
+        if(c->defeated<0)c->defeated=0;
+        c->objective=(c->defeated*c->objective_total)/c->stage_total;
+        if(remaining==0)c->boss_active=1;
+    }
 }
 void gameplaySetStage(CampaignState *c,StageId id){
     c->stage=(int)id;c->objective=0;c->defeated=0;c->boss_active=0;
     c->boss_hp=30+(int)id*15;
-    c->objective_total=3+(int)id;
+    c->objective_total=3+(int)id;c->stage_total=6+(int)id*2;
 }
 int gameplayBossDamage(CampaignState *c,int damage){
     if(!c->boss_active||damage<=0)return 0;

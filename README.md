@@ -1,63 +1,61 @@
-# RE4 Proto — PSP
+# RE4 Proto — PSP / PPSSPP
 
-A small homebrew 3D action prototype for PSP and PPSSPP. The game menus and HUD are Arabic-first, with an embedded bitmap font; no runtime font download is required.
+مشروع لعبة أكشن ثلاثية الأبعاد أصلية بمنظور الشخص الثالث، مستوحاة من ألعاب البقاء والرعب والحركة الكلاسيكية. لا تستخدم اللعبة ملفات أو شخصيات أو أصواتًا مأخوذة من Resident Evil 4.
 
-## Project structure
+## الأنظمة الموجودة في فرع التطوير
 
-- \`main.c\` — PSP game loop, arena, targets, controls, HUD and menus.
-- \`arabic_font.c/.h\` — embedded bitmap font renderer, Arabic contextual forms, right-to-left line layout and mixed Arabic/Latin text.
-- \`arabic_font_data.h\` — Arabic glyph bitmap data.
-- \`arabic_font_ascii_data.h\` — printable ASCII glyph bitmap data.
-- \`obj_loader.c/.h\` — Wavefront OBJ position/UV reader with polygon triangulation.
-- \`texture.c/.h\` — PNG loader via \`stb_image.h\` and PSP GU texture binding.
-- \`audio.c/.h\` — generated fallback sound effects sent through non-blocking audio output.
-- \`savedata.c/.h\` — validated save/load data in the PSP savedata folder.
-- \`Makefile\` — PSPSDK build configuration.
-- \`assets/\` — optional player/enemy OBJ and PNG files.
+- كاميرا خلف اللاعب مع وضع تصويب أقرب للكتف.
+- حركة مشي وجري، وحالات حركة للشخصية مع تحريك إجرائي مبسط للأطراف عند غياب ملفات النماذج.
+- أعداء بحالات سلوك: خمول، انتباه، مطاردة، هجوم، وتوقف مؤقت بعد الإصابة.
+- ثلاث مناطق لعب أولية: القرية والقلعة والجزيرة، مبنية بمجسمات منخفضة التفاصيل مناسبة لاختبار PSP.
+- أسلحة قابلة للفتح: مسدس، بندقية خرطوش، وبندقية بعيدة المدى، مع ذخيرة وتلقيم وترقية ضرر.
+- تاجر ومخزون وعلاج ومال ومكافآت.
+- موجات أعداء ومواجهة زعيم في نهاية كل منطقة، ثم انتقال إلى المنطقة التالية وشاشة إكمال الحملة.
+- واجهات عربية وقوائم للتوقف والتاجر والمخزون.
+- حفظ موضع اللاعب والمرحلة والمال والأسلحة والذخيرة والعلاج والتقدم؛ مع محاولة قراءة صيغة الحفظ القديمة تلقائيًا.
 
-## Arabic rendering
+## هيكل المشروع
 
-The bitmap font is embedded in the repository. It supports Arabic base letters with their common contextual presentation forms, printable ASCII, Arabic-Indic digits, and a limited punctuation set. The renderer places Arabic runs right-to-left and keeps basic Latin/digit runs in their expected order.
+- `main.c` — حلقة اللعبة، العرض، التحكم والقوائم.
+- `gameplay.c/.h` — حالات اللاعب والأعداء والأسلحة والمخزون والمراحل.
+- `savedata.c/.h` — حفظ الحملة وترحيل صيغة الحفظ السابقة.
+- `audio.c/.h` — مؤثرات صوتية مولدة محليًا.
+- `arabic_font.c/.h` وملفات بيانات الخط — عرض الواجهة العربية.
+- `obj_loader.c/.h` و`texture.c/.h` — دعم ملفات OBJ وصور PNG الاختيارية.
+- `tests/gameplay_test.c` — اختبارات وحدات لأنظمة اللعب.
 
-This is a lightweight game UI renderer, not a full Unicode bidirectional implementation. Combining Arabic vowel marks are currently skipped, and complex punctuation/paragraph-direction cases should be visually checked on PPSSPP.
+## التحكم
 
-## Build
+- العصا التناظرية أو الأسهم: الحركة والالتفاف.
+- زر R مع الحركة: الجري.
+- زر L: التصويب.
+- زر X: إطلاق النار.
+- زر المربع: إعادة التلقيم.
+- زر المثلث: استخدام العلاج.
+- L مع السهمين: تبديل السلاح المملوك.
+- Start: إيقاف اللعبة وفتح القائمة.
+- Select: حفظ سريع.
+- من قائمة الإيقاف: التاجر، المخزون، حفظ، أو العودة للعنوان.
 
-Use GitHub Codespaces or VS Code Dev Containers with \`pspdev/pspdev:latest\`. The GitHub Actions workflow also builds the EBOOT on pushes and pull requests for \`main\` and \`feature/arabic-localization\`.
+داخل التاجر استخدم الأسهم للاختيار وX للشراء. تشمل الخيارات الذخيرة والعلاج والسلاحين الإضافيين وترقية السلاح الحالي.
 
-In the PSPDEV environment:
+## البناء
 
-\`\`\`sh
+يتولى GitHub Actions اختبار منطق اللعب باستخدام GCC ثم بناء `EBOOT.PBP` داخل صورة `pspdev/pspdev:latest`. يتطلب البناء تنزيل `stb_image.h` كما تفعل خطوات سير العمل.
+
+للبناء المحلي داخل بيئة PSPDEV:
+
+```sh
+gcc -std=c99 -O2 -Wall -Wextra -Werror gameplay.c tests/gameplay_test.c -lm -o gameplay-test
+./gameplay-test
 curl -fsSL https://raw.githubusercontent.com/nothings/stb/master/stb_image.h -o stb_image.h
+make clean
 make check-deps
 make
-\`\`\`
+```
 
-The build output is \`EBOOT.PBP\`. GitHub Actions uploads it as the \`RE4Proto-EBOOT\` artifact when the build succeeds.
+ينتج البناء `EBOOT.PBP`. ارفع الملف إلى `PSP/GAME/RE4Proto/EBOOT.PBP` ثم اختبره على PPSSPP قبل نقله إلى جهاز PSP.
 
-## Install and controls
+## حدود النسخة الحالية
 
-Copy \`EBOOT.PBP\` to \`PSP/GAME/RE4Proto/EBOOT.PBP\`, then launch it from the PSP Game menu or PPSSPP.
-
-- Analog stick or D-pad: move and turn.
-- X or R trigger: fire.
-- L trigger: aim, show the laser line and increase damage.
-- Square: reload.
-- Select: quick save.
-- Start: pause or resume.
-- Circle: return to the title menu; on the title screen it exits.
-- Triangle: save while paused.
-- Home: exit the game.
-
-## Optional assets
-
-Place these files in \`assets/\` to replace the fallback geometry:
-
-- \`player.obj\`, \`enemy.obj\`
-- \`player.png\`, \`enemy.png\`
-
-If these files are absent, the game falls back to primitive shapes. Sound effects are generated internally; external raw sound files are not required.
-
-## Scope and testing
-
-This repository is a compact prototype, not a complete remake of Resident Evil 4. Its gameplay, visuals, collision and sound remain intentionally limited. A successful compile confirms only that the program builds; test the generated EBOOT in PPSSPP and then on PSP hardware before treating the release as device-verified.
+هذا فرع تطوير قابل للتوسع وليس إعادة إنتاج تجارية مكتملة أو نسخة مطابقة من Resident Evil 4. البيئات والمجسمات الحالية منخفضة التفاصيل ومبنية إجرائيًا، وتحريك الشخصية مبسط وليس نظام عظام/هيكل عظمي مستوردًا. لا تزال بحاجة إلى اختبار الأداء الفعلي على PSP وPPSSPP، والتحقق البصري من الخط العربي، وإضافة أصول فنية وصوتية أصلية أكثر تفصيلًا.

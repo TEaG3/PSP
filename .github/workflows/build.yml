@@ -1,0 +1,28 @@
+name: Build PSP EBOOT
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build with PSPDEV
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            -w /src \
+            pspdev/pspdev:latest \
+            sh -lc 'curl -fsSL https://raw.githubusercontent.com/nothings/stb/master/stb_image.h -o stb_image.h && make clean && make'
+
+      - name: Upload EBOOT.PBP
+        uses: actions/upload-artifact@v4
+        with:
+          name: RE4Proto-EBOOT
+          path: EBOOT.PBP
+          if-no-files-found: error

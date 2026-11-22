@@ -278,15 +278,16 @@ static void draw_aim_line(void) {
 static void render_scene(int aiming) {
     int i;
     ScePspFVector3 camera = {
-        player_x - sinf(player_angle) * 7.0f, 5.0f,
-        player_z - cosf(player_angle) * 7.0f
+        player_x - sinf(player_angle) * (aiming ? 3.5f : 5.8f) + cosf(player_angle)*0.9f,
+        aiming ? 2.6f : 3.8f,
+        player_z - cosf(player_angle) * (aiming ? 3.5f : 5.8f) - sinf(player_angle)*0.9f
     };
     ScePspFVector3 target = {player_x, 1.0f, player_z};
     ScePspFVector3 up = {0.0f, 1.0f, 0.0f};
     char hud[128];
 
     sceGuStart(GU_DIRECT, display_list);
-    sceGuClearColor(0xFF101820);
+    sceGuClearColor(current_stage.ground_color ? current_stage.ground_color : 0xFF101820);
     sceGuClearDepth(0);
     sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT);
     sceGuEnable(GU_DEPTH_TEST);
@@ -312,17 +313,17 @@ static void render_scene(int aiming) {
     }
 
     draw_model(player_model, player_texture, player_x, 0.0f, player_z, 1.0f);
-    for (i = 0; i < TARGET_COUNT; ++i) {
-        if (target_active[i])
-            draw_model(enemy_model, enemy_texture, target_x[i], 0.0f, target_z[i], 1.2f);
+    for (i = 0; i < GAME_ENEMY_MAX; ++i) {
+        if (enemies[i].active && enemies[i].state != ENEMY_DEAD)
+            draw_model(enemy_model, enemy_texture, enemies[i].x, 0.0f, enemies[i].z, enemies[i].boss ? 1.7f : 1.2f);
     }
     if (aiming) draw_aim_line();
 
     sceGuDisable(GU_DEPTH_TEST);
     sceGuDisable(GU_CULL_FACE);
     sceGuDisable(GU_TEXTURE_2D);
-    (void)snprintf(hud, sizeof(hud), "الصحة %d - النقاط %d - الذخيرة %d/%d",
-                   hp, score, ammo, reserve_ammo);
+    (void)snprintf(hud, sizeof(hud), "الصحة %d - النقاط %d - الذخيرة %d/%d - المال %d",
+                   hp, score, ammo, reserve_ammo, player_state.money);
     arabicDrawTextRTL(472.0f, 8.0f, 0.72f, 0xFFFFFFFF, hud);
     arabicDrawTextRTL(472.0f, 30.0f, 0.62f, 0xFFB8D8FF,
                       "التصويب أو الزناد - مربع لإعادة التلقيم - زر الاختيار للحفظ");

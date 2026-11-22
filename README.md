@@ -1,49 +1,39 @@
-# RE4 Proto — PSP / PPSSPP
+# Survival Protocol — PSP / PPSSPP
 
-مشروع لعبة أكشن ثلاثية الأبعاد أصلية بمنظور الشخص الثالث، مستوحاة من ألعاب البقاء والرعب والحركة الكلاسيكية. لا تستخدم اللعبة ملفات أو شخصيات أو أصواتًا مأخوذة من Resident Evil 4.
+An original third-person survival-action prototype for PSP and PPSSPP. It takes broad gameplay inspiration from classic over-the-shoulder survival-action games, while using original code and assets. It does not include Resident Evil 4 characters, levels, models, textures, music, or other copyrighted game assets.
 
-## الأنظمة الموجودة في فرع التطوير
+## Current prototype systems
 
-- كاميرا خلف اللاعب مع وضع تصويب أقرب للكتف.
-- حركة مشي وجري، وحالات حركة للشخصية مع تحريك إجرائي مبسط للأطراف عند غياب ملفات النماذج.
-- أعداء بحالات سلوك: خمول، انتباه، مطاردة، هجوم، وتوقف مؤقت بعد الإصابة.
-- ثلاث مناطق لعب أولية: القرية والقلعة والجزيرة، مبنية بمجسمات منخفضة التفاصيل مناسبة لاختبار PSP.
-- أسلحة قابلة للفتح: مسدس، بندقية خرطوش، وبندقية بعيدة المدى، مع ذخيرة وتلقيم وترقية ضرر.
-- تاجر ومخزون وعلاج ومال ومكافآت.
-- موجات أعداء ومواجهة زعيم في نهاية كل منطقة، ثم انتقال إلى المنطقة التالية وشاشة إكمال الحملة.
-- واجهات عربية وقوائم للتوقف والتاجر والمخزون.
-- حفظ موضع اللاعب والمرحلة والمال والأسلحة والذخيرة والعلاج والتقدم؛ مع محاولة قراءة صيغة الحفظ القديمة تلقائيًا.
+- Third-person follow camera with a closer aiming camera.
+- Analog movement, turning, walking/running states, and basic collision against stage blocks and arena bounds.
+- Procedural fallback player/enemy silhouettes when optional OBJ models are not present.
+- Enemy states for idle, alert, chase, attack, stagger, and dead.
+- Three weapon slots: handgun, shotgun, and rifle, with ammo, reload, ownership, and damage upgrades.
+- Merchant, money, healing items, and a basic inventory screen.
+- Three stage themes: Village, Castle, and Island.
+- Campaign progression and boss-state data.
+- Save/load support for player position, stage, health, weapons, ammo, money, and progress.
+- Generated placeholder sound effects.
+- English UI is now the active interface language.
 
-## هيكل المشروع
+## Controls
 
-- `main.c` — حلقة اللعبة، العرض، التحكم والقوائم.
-- `gameplay.c/.h` — حالات اللاعب والأعداء والأسلحة والمخزون والمراحل.
-- `savedata.c/.h` — حفظ الحملة وترحيل صيغة الحفظ السابقة.
-- `audio.c/.h` — مؤثرات صوتية مولدة محليًا.
-- `arabic_font.c/.h` وملفات بيانات الخط — عرض الواجهة العربية.
-- `obj_loader.c/.h` و`texture.c/.h` — دعم ملفات OBJ وصور PNG الاختيارية.
-- `tests/gameplay_test.c` — اختبارات وحدات لأنظمة اللعب.
+- Analog stick / D-pad: move and turn.
+- R + movement: run.
+- L: aim.
+- X: fire.
+- Square: reload.
+- Triangle: use healing item.
+- L + Triangle: upgrade current weapon.
+- L + Circle: switch weapon.
+- Start: pause.
+- Select: quick save.
 
-## التحكم
+## Build and test
 
-- العصا التناظرية أو الأسهم: الحركة والالتفاف.
-- زر R مع الحركة: الجري.
-- زر L: التصويب.
-- زر X: إطلاق النار.
-- زر المربع: إعادة التلقيم.
-- زر المثلث: استخدام العلاج.
-- L مع السهمين: تبديل السلاح المملوك.
-- Start: إيقاف اللعبة وفتح القائمة.
-- Select: حفظ سريع.
-- من قائمة الإيقاف: التاجر، المخزون، حفظ، أو العودة للعنوان.
+GitHub Actions runs gameplay unit tests and builds `EBOOT.PBP` with PSPDEV.
 
-داخل التاجر استخدم الأسهم للاختيار وX للشراء. تشمل الخيارات الذخيرة والعلاج والسلاحين الإضافيين وترقية السلاح الحالي.
-
-## البناء
-
-يتولى GitHub Actions اختبار منطق اللعب باستخدام GCC ثم بناء `EBOOT.PBP` داخل صورة `pspdev/pspdev:latest`. يتطلب البناء تنزيل `stb_image.h` كما تفعل خطوات سير العمل.
-
-للبناء المحلي داخل بيئة PSPDEV:
+For a local PSPDEV environment:
 
 ```sh
 gcc -std=c99 -O2 -Wall -Wextra -Werror gameplay.c tests/gameplay_test.c -lm -o gameplay-test
@@ -54,8 +44,31 @@ make check-deps
 make
 ```
 
-ينتج البناء `EBOOT.PBP`. ارفع الملف إلى `PSP/GAME/RE4Proto/EBOOT.PBP` ثم اختبره على PPSSPP قبل نقله إلى جهاز PSP.
+Install the resulting file at `PSP/GAME/RE4Proto/EBOOT.PBP` and launch it with PPSSPP.
 
-## حدود النسخة الحالية
+## Development status — not a finished game
 
-هذا فرع تطوير قابل للتوسع وليس إعادة إنتاج تجارية مكتملة أو نسخة مطابقة من Resident Evil 4. البيئات والمجسمات الحالية منخفضة التفاصيل ومبنية إجرائيًا، وتحريك الشخصية مبسط وليس نظام عظام/هيكل عظمي مستوردًا. لا تزال بحاجة إلى اختبار الأداء الفعلي على PSP وPPSSPP، والتحقق البصري من الخط العربي، وإضافة أصول فنية وصوتية أصلية أكثر تفصيلًا.
+The current build is still a prototype. The stage geometry is made from low-poly procedural primitives; optional player/enemy OBJ and PNG assets are not yet supplied in the repository. Character animation is procedural and limited. The enemy AI, campaign flow, inventory, merchant, and boss logic still need in-game validation and balancing. A successful compiler build does not prove that rendering, controls, sound, saving, or performance work correctly in PPSSPP.
+
+## Completion gates
+
+The project should not be called complete until all of these are verified in PPSSPP:
+
+1. Title screen and English UI render cleanly.
+2. The full 3D stage, player, and enemies are visible.
+3. Camera follow, aiming, movement, and collision work without clipping or lockups.
+4. Enemies can detect, approach, attack, react to hits, and be defeated.
+5. Weapons, ammo, reload, healing, merchant, and inventory work together.
+6. Stage transitions, boss encounters, campaign completion, and save/load work.
+7. Audio plays reliably and does not stall the frame loop.
+8. Sustained gameplay has acceptable frame rate and memory use on the target device.
+
+## Next development priorities
+
+1. Fix and verify the 3D render path on PPSSPP before adding visual complexity.
+2. Replace placeholder actor silhouettes with original low-poly character models and textures.
+3. Build distinct, navigable spaces for Village, Castle, and Island, including collision geometry that matches visible obstacles.
+4. Improve enemy behavior, hit feedback, combat readability, and encounter pacing.
+5. Finish stage objectives, boss encounters, merchant/inventory balancing, and save/load validation.
+6. Add original or properly licensed sound and visual assets.
+7. Run device-based PPSSPP tests and record actual screenshots and performance results.

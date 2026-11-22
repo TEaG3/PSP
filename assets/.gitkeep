@@ -1,0 +1,3 @@
+Optional game assets belong in this directory:
+player.obj, player.png, enemy.obj, enemy.png, gunshot.raw, hit.raw.
+The prototype includes simple built-in placeholder geometry and generated sound effects.

@@ -99,6 +99,7 @@ static uint32_t psp_mirror(uint32_t c) {
 static int arabic_process_line(const char *utf8, uint32_t *out,
                                int max_out, int strip_marks) {
     uint32_t in[512], shaped[512], visual[512];
+    unsigned char consumed[512]={0};
     int start[512], end[512], dir[512], n=0, i, runs=0, used=0;
     const unsigned char *p=(const unsigned char *)utf8;
     if(!utf8||!out||max_out<=0) return 0;
@@ -113,14 +114,14 @@ static int arabic_process_line(const char *utf8, uint32_t *out,
         const PspArabicForm *cur=psp_arabic_find(in[i]), *pr=NULL,*nx=NULL;
         int pi=i-1,ni=i+1,jp=0,jn=0;
         uint32_t lig;
-        if(!cur)continue;
+        if(!cur || consumed[i])continue;
         while(pi>=0 && psp_arabic_is_mark(in[pi]))pi--;
         while(ni<n && psp_arabic_is_mark(in[ni]))ni++;
         if(pi>=0)pr=psp_arabic_find(in[pi]);
         if(ni<n)nx=psp_arabic_find(in[ni]);
         jp=pr && pr->initial_form && cur->final_form;
         lig=(in[i]==0x0644 && ni<n)?psp_lam_alef(in[ni],jp):0;
-        if(lig){shaped[i]=lig;shaped[ni]=0;continue;}
+        if(lig){shaped[i]=lig;shaped[ni]=0;consumed[ni]=1;continue;}
         jn=nx && cur->initial_form && nx->final_form;
         if(jp&&jn&&cur->medial_form)shaped[i]=cur->medial_form;
         else if(jp&&cur->final_form)shaped[i]=cur->final_form;

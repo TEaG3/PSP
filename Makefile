@@ -1,5 +1,5 @@
 TARGET = re4_proto
-OBJS = main.o gameplay.o navigation.o arabic_font.o obj_loader.o texture.o audio.o savedata.o
+OBJS = main.o gameplay.o navigation.o world_navigation.o enemy_navigation.o arabic_font.o obj_loader.o texture.o audio.o savedata.o
 INCDIR = .
 CFLAGS = -O2 -G0 -Wall -Wextra -I. -D PSP
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti

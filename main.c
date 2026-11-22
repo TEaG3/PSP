@@ -197,7 +197,10 @@ static void update_game(const SceCtrlData *pad) {
         if(had_ammo>0){playSound(SFX_GUNSHOT);if(hit>=0){score+=25;playSound(SFX_HIT);}}
         else playSound(SFX_EMPTY);
     }
-    if(pressed(buttons,PSP_CTRL_TRIANGLE))(void)gameplayUseHealth(&player_state,&inventory);
+    if(pressed(buttons,PSP_CTRL_TRIANGLE)){
+        if(buttons&PSP_CTRL_LTRIGGER)(void)gameplayUpgradeWeapon(&player_state,&weapons[selected_weapon],250);
+        else (void)gameplayUseHealth(&player_state,&inventory);
+    }
     if((buttons&PSP_CTRL_LTRIGGER)&&pressed(buttons,PSP_CTRL_LEFT)){
         int next=(selected_weapon+GAME_WEAPON_MAX-1)%GAME_WEAPON_MAX;
         if(weapons[next].owned)selected_weapon=next;
@@ -207,7 +210,13 @@ static void update_game(const SceCtrlData *pad) {
         if(weapons[next].owned)selected_weapon=next;
     }
     if(pressed(buttons,PSP_CTRL_CIRCLE)){
-        if(gameplayBuyAmmo(&player_state,&weapons[selected_weapon],10,2))playSound(SFX_PICKUP);
+        if(buttons&PSP_CTRL_LTRIGGER){
+            int id;
+            for(id=WEAPON_SHOTGUN;id<GAME_WEAPON_MAX;id++)if(!weapons[id].owned){
+                if(gameplayBuyWeapon(&player_state,weapons,(WeaponId)id))playSound(SFX_PICKUP);
+                break;
+            }
+        } else if(gameplayBuyAmmo(&player_state,&weapons[selected_weapon],10,2))playSound(SFX_PICKUP);
     }
     gameplayUpdateCampaign(&campaign,enemies);
     if(campaign.boss_active==1){
@@ -341,7 +350,7 @@ static void render_scene(int aiming) {
     arabicDrawTextRTL(472.0f, 8.0f, 0.72f, 0xFFFFFFFF, hud);
     arabicDrawTextRTL(472.0f, 52.0f, 0.68f, 0xFFFFD080, current_stage.name);
     arabicDrawTextRTL(472.0f, 30.0f, 0.62f, 0xFFB8D8FF,
-                      "L تصويب | مربع تلقيم | مثلث علاج | دائرة شراء ذخيرة");
+                      "L تصويب | مربع تلقيم | مثلث علاج | L+مثلث ترقية | دائرة ذخيرة | L+دائرة سلاح");
     sceGuFinish();
     sceGuSync(0, 0);
     sceGuSwapBuffers();

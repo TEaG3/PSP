@@ -16,10 +16,10 @@ static int g_ready;
 
 static void generate_clips(void) {
     static const float frequencies[NUM_SFX] = {
-        115.0f, 260.0f, 520.0f, 180.0f, 740.0f, 90.0f
+        115.0f, 260.0f, 520.0f, 180.0f, 740.0f, 90.0f, 330.0f, 62.0f
     };
     static const float amplitudes[NUM_SFX] = {
-        0.78f, 0.42f, 0.25f, 0.22f, 0.28f, 0.38f
+        0.78f, 0.42f, 0.25f, 0.22f, 0.28f, 0.38f, 0.24f, 0.48f
     };
     int s, i;
     for (s = 0; s < NUM_SFX; ++s) {
@@ -28,7 +28,7 @@ static void generate_clips(void) {
             float t = (float)i / 44100.0f;
             float envelope = 1.0f - (float)i / (float)AUDIO_SAMPLES;
             float wave = sinf(2.0f * PI_F * frequencies[s] * t);
-            if (s == SFX_GUNSHOT || s == SFX_HIT || s == SFX_HURT) {
+            if (s == SFX_GUNSHOT || s == SFX_HIT || s == SFX_HURT || s == SFX_BOSS) {
                 float random;
                 noise = noise * 1664525u + 1013904223u;
                 random = ((float)((noise >> 16) & 0x7FFFu) / 16384.0f) - 1.0f;

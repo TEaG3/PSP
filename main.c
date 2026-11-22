@@ -96,6 +96,8 @@ static void save_current_game(void) {
     state.selected_weapon = selected_weapon;
     state.health_items = inventory.amount[ITEM_HEALTH];
     state.objective = campaign.objective; state.boss_active = campaign.boss_active;
+    state.defeated=campaign.defeated; state.boss_hp=campaign.boss_hp; state.completed=campaign.completed;
+    { int i; for(i=0;i<GAME_ENEMY_MAX;i++)if(enemies[i].active&&enemies[i].boss){state.boss_hp=enemies[i].hp;break;} }
     { int i; for(i=0;i<GAME_WEAPON_MAX;i++) {
         state.weapon_mag[i]=weapons[i].mag; state.weapon_reserve[i]=weapons[i].reserve;
         state.weapon_damage[i]=weapons[i].damage; state.weapon_owned[i]=weapons[i].owned;
@@ -135,6 +137,20 @@ static void reset_game(void) {
           player_state.money=saved.money; selected_weapon=saved.selected_weapon;
           inventory.amount[ITEM_HEALTH]=saved.health_items;
           campaign.objective=saved.objective; campaign.boss_active=saved.boss_active;
+          campaign.defeated=saved.defeated; campaign.boss_hp=saved.boss_hp; campaign.completed=saved.completed;
+          if(saved.boss_active==2){
+              int j; for(j=0;j<GAME_ENEMY_MAX;j++){enemies[j].active=0;enemies[j].state=ENEMY_DEAD;}
+              enemies[GAME_ENEMY_MAX-1].x=0.0f;enemies[GAME_ENEMY_MAX-1].z=12.0f;
+              enemies[GAME_ENEMY_MAX-1].hp=saved.boss_hp>0?saved.boss_hp:campaign.boss_hp;
+              enemies[GAME_ENEMY_MAX-1].speed=1.0f+(float)saved.stage*0.2f;
+              enemies[GAME_ENEMY_MAX-1].active=1;enemies[GAME_ENEMY_MAX-1].boss=1;
+              enemies[GAME_ENEMY_MAX-1].state=ENEMY_ALERT;
+          } else {
+              int j,remaining=saved.defeated;
+              for(j=0;j<GAME_ENEMY_MAX&&remaining>0;j++)if(enemies[j].active){
+                  enemies[j].active=0;enemies[j].state=ENEMY_DEAD;remaining--;
+              }
+          }
           for(i=0;i<GAME_WEAPON_MAX;i++){
               weapons[i].mag=saved.weapon_mag[i];weapons[i].reserve=saved.weapon_reserve[i];
               weapons[i].damage=saved.weapon_damage[i];weapons[i].owned=saved.weapon_owned[i];
@@ -142,6 +158,7 @@ static void reset_game(void) {
         }
     }
     paused = 0; pause_mode=0; pause_selection=0;
+    player_previous_hp=hp;
     game_started = 1;
 }
 
@@ -295,12 +312,13 @@ static void update_game(const SceCtrlData *pad) {
                      ((buttons&PSP_CTRL_RTRIGGER)?PLAYER_RUN:PLAYER_WALK);
     if(pressed(buttons,PSP_CTRL_SQUARE)&&gameplayReload(&player_state,&weapons[selected_weapon]))playSound(SFX_RELOAD);
     gameplayUpdateReload(&player_state,&weapons[selected_weapon]);
-    gameplayUpdateEnemies(&player_state,enemies,1.0f/30.0f);
+    gameplayUpdateEnemies(&player_state,enemies,1.0f/60.0f);
     if(animation_frame<1000000)animation_frame++;
     if(muzzle_flash_frames>0)muzzle_flash_frames--;
     if(hit_flash_frames>0)hit_flash_frames--;
     if(player_state.hp<player_previous_hp){playSound(SFX_HURT);hit_flash_frames=8;}
     player_previous_hp=player_state.hp;
+    if(player_state.hp<=0){paused=1;pause_mode=4;}
     if(pressed(buttons,PSP_CTRL_CROSS)){
         int had_ammo=weapons[selected_weapon].mag;
         hit=gameplayFire(&player_state,&weapons[selected_weapon],enemies,GAME_ENEMY_MAX,16.0f,
@@ -340,7 +358,9 @@ static void update_game(const SceCtrlData *pad) {
                 enemies[i].speed=0.85f+campaign.stage*0.2f;
                 enemies[i].active=1; enemies[i].boss=1;
                 enemies[i].state=ENEMY_ALERT;
+                campaign.boss_hp=enemies[i].hp;
                 campaign.boss_active=2;
+                playSound(SFX_BOSS);
                 break;
             }
         }
@@ -352,7 +372,16 @@ static void update_game(const SceCtrlData *pad) {
             if(campaign.stage<STAGE_ISLAND){
                 campaign.stage++;
                 gameplayLoadStage((StageId)campaign.stage,&current_stage,enemies);
-            } else campaign.objective=campaign.objective_total;
+                gameplaySetStage(&campaign,(StageId)campaign.stage);
+                player_x=0.0f;player_z=0.0f;player_state.x=player_x;player_state.z=player_z;
+                playSound(SFX_STAGE);
+                save_current_game();
+            } else {
+                campaign.objective=campaign.objective_total;
+                campaign.completed=1;campaign.boss_active=0;
+                paused=1;pause_mode=3;
+                save_current_game();
+            }
         }
     }
     hp=player_state.hp; ammo=weapons[selected_weapon].mag; reserve_ammo=weapons[selected_weapon].reserve;
@@ -382,7 +411,15 @@ static void render_pause(void) {
     sceGuClearColor(0xFF101820);
     sceGuClear(GU_COLOR_BUFFER_BIT);
     sceGuDisable(GU_DEPTH_TEST);sceGuDisable(GU_CULL_FACE);sceGuDisable(GU_TEXTURE_2D);
-    if(pause_mode==0){
+    if(pause_mode==3){
+        arabicDrawTextCenter(240.0f,84.0f,1.35f,0xFFFFD080,"اكتملت الحملة");
+        arabicDrawTextCenter(240.0f,132.0f,0.92f,0xFFFFFFFF,"لقد أنهيت المراحل الثلاث");
+        arabicDrawTextCenter(240.0f,202.0f,0.82f,0xFFB8D8FF,"X أو O للعودة إلى القائمة الرئيسية");
+    } else if(pause_mode==4){
+        arabicDrawTextCenter(240.0f,84.0f,1.35f,0xFFFF8080,"انتهت المحاولة");
+        arabicDrawTextCenter(240.0f,132.0f,0.92f,0xFFFFFFFF,"تم حفظ آخر نقطة محفوظة");
+        arabicDrawTextCenter(240.0f,202.0f,0.82f,0xFFB8D8FF,"X أو O للعودة إلى القائمة الرئيسية");
+    } else if(pause_mode==0){
         arabicDrawTextCenter(240.0f,32.0f,1.15f,0xFFFFFFFF,"القائمة");
         arabicDrawTextCenter(240.0f,66.0f,0.82f,0xFFFFFFFF,pause_selection==0?"> متابعة اللعب":"متابعة اللعب");
         arabicDrawTextCenter(240.0f,96.0f,0.82f,0xFFFFFFFF,pause_selection==1?"> حفظ التقدم":"حفظ التقدم");
@@ -415,6 +452,12 @@ static void render_pause(void) {
 }
 
 static void update_pause_menu(unsigned int buttons) {
+    if(pause_mode==3||pause_mode==4){
+        if(pressed(buttons,PSP_CTRL_CROSS)||pressed(buttons,PSP_CTRL_CIRCLE)){
+            game_started=0;paused=0;pause_mode=0;
+        }
+        return;
+    }
     if(pause_mode==0){
         if(pressed(buttons,PSP_CTRL_UP))pause_selection=(pause_selection+4)%5;
         if(pressed(buttons,PSP_CTRL_DOWN))pause_selection=(pause_selection+1)%5;
@@ -530,6 +573,7 @@ static void render_scene(int aiming) {
     arabicDrawTextRTL(472.0f, 52.0f, 0.68f, 0xFFFFD080, current_stage.name);
     (void)snprintf(hud,sizeof(hud),"المهمة %d/%d - الأعداء %d/%d",campaign.objective,campaign.objective_total,campaign.defeated,current_stage.enemy_total);
     arabicDrawTextRTL(472.0f,74.0f,0.62f,0xFFFFFFFF,hud);
+    if(hit_flash_frames>0)arabicDrawTextCenter(240.0f,104.0f,0.9f,0xFFFF7777,"أُصيب اللاعب");
     arabicDrawTextRTL(472.0f, 30.0f, 0.62f, 0xFFB8D8FF,
                       "L تصويب | مربع تلقيم | مثلث علاج | L+مثلث ترقية | دائرة ذخيرة | L+دائرة سلاح");
     sceGuFinish();

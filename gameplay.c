@@ -123,7 +123,7 @@ void gameplayUpdateCampaign(CampaignState *c,EnemyStateData enemies[GAME_ENEMY_M
     int i,remaining=0;
     for(i=0;i<GAME_ENEMY_MAX;i++)if(enemies[i].active&&enemies[i].state!=ENEMY_DEAD)remaining++;
     c->defeated=GAME_ENEMY_MAX-remaining;
-    if(remaining==0)c->boss_active=1;
+    if(remaining==0 && c->boss_active==0)c->boss_active=1;
 }
 int gameplayBossDamage(CampaignState *c,int damage){
     if(!c->boss_active||damage<=0)return 0;

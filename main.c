@@ -12,6 +12,7 @@
 #include "obj_loader.h"
 #include "texture.h"
 #include "savedata.h"
+#include "gameplay.h"
 
 PSP_MODULE_INFO("RE4 Proto", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
@@ -38,6 +39,13 @@ static const float target_x[TARGET_COUNT] = {-7.0f, 7.0f, -7.0f, 7.0f};
 static const float target_z[TARGET_COUNT] = {-8.0f, -8.0f, 8.0f, 8.0f};
 static ObjModel *player_model, *enemy_model;
 static Texture *player_texture, *enemy_texture;
+static PlayerState player_state;
+static EnemyStateData enemies[GAME_ENEMY_MAX];
+static WeaponState weapons[GAME_WEAPON_MAX];
+static InventoryState inventory;
+static CampaignState campaign;
+static StageData current_stage;
+static int selected_weapon = WEAPON_HANDGUN;
 
 static const ColorVertex cube_vertices[] = {
     {0xFF4D8C35,-0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f, 0.5f, 0.5f},
@@ -101,7 +109,10 @@ static void reset_game(void) {
     score = 0;
     ammo = 10;
     reserve_ammo = 40;
-    for (i = 0; i < TARGET_COUNT; ++i) { target_active[i] = 1; target_hp[i] = 2; }
+    gameplayInit(&player_state, enemies, weapons, &inventory, &campaign);
+    gameplayLoadStage(STAGE_VILLAGE, &current_stage, enemies);
+    player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
+    for (i = 0; i < TARGET_COUNT; ++i) { target_active[i] = 0; target_hp[i] = 2; }
     if (loadGame(&saved) == 0) {
         player_x = saved.player_x;
         player_z = saved.player_z;
@@ -155,74 +166,52 @@ static void draw_model(ObjModel *model, Texture *texture,
 }
 
 static void update_game(const SceCtrlData *pad) {
-    float move = 0.0f;
-    unsigned int buttons = pad->Buttons;
-    int i;
-
-    if (pressed(buttons, PSP_CTRL_START)) {
-        paused = 1;
-        return;
+    float move=0.0f;
+    unsigned int buttons=pad->Buttons;
+    int hit;
+    if(pressed(buttons,PSP_CTRL_START)){paused=1;return;}
+    if(buttons&PSP_CTRL_LEFT)player_angle-=0.045f;
+    if(buttons&PSP_CTRL_RIGHT)player_angle+=0.045f;
+    if(buttons&PSP_CTRL_UP)move=(buttons&PSP_CTRL_RTRIGGER)?0.24f:0.14f;
+    if(buttons&PSP_CTRL_DOWN)move=-0.12f;
+    if(pad->Lx>150)player_angle+=0.035f;
+    else if(pad->Lx<105)player_angle-=0.035f;
+    if(pad->Ly<110)move=(buttons&PSP_CTRL_RTRIGGER)?0.24f:0.14f;
+    else if(pad->Ly>145)move=-0.12f;
+    player_x+=sinf(player_angle)*move; player_z+=cosf(player_angle)*move;
+    if(player_x>ARENA_LIMIT)player_x=ARENA_LIMIT;
+    if(player_x<-ARENA_LIMIT)player_x=-ARENA_LIMIT;
+    if(player_z>ARENA_LIMIT)player_z=ARENA_LIMIT;
+    if(player_z<-ARENA_LIMIT)player_z=-ARENA_LIMIT;
+    player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
+    player_state.aiming=(buttons&PSP_CTRL_LTRIGGER)!=0;
+    player_state.anim=move==0.0f?(player_state.aiming?PLAYER_AIM:PLAYER_IDLE):
+                     ((buttons&PSP_CTRL_RTRIGGER)?PLAYER_RUN:PLAYER_WALK);
+    if(pressed(buttons,PSP_CTRL_SQUARE)&&gameplayReload(&player_state,&weapons[selected_weapon]))playSound(SFX_RELOAD);
+    gameplayUpdateReload(&player_state,&weapons[selected_weapon]);
+    gameplayUpdateEnemies(&player_state,enemies,1.0f/30.0f);
+    if(pressed(buttons,PSP_CTRL_CROSS)||pressed(buttons,PSP_CTRL_RTRIGGER)){
+        int had_ammo=weapons[selected_weapon].mag;
+        hit=gameplayFire(&player_state,&weapons[selected_weapon],enemies,GAME_ENEMY_MAX,16.0f,
+                         player_state.aiming?0.28f:0.18f);
+        if(had_ammo>0){playSound(SFX_GUNSHOT);if(hit>=0){score+=25;playSound(SFX_HIT);}}
+        else playSound(SFX_EMPTY);
     }
-    if (buttons & PSP_CTRL_LEFT) player_angle -= 0.045f;
-    if (buttons & PSP_CTRL_RIGHT) player_angle += 0.045f;
-    if (buttons & PSP_CTRL_UP) move = 0.16f;
-    if (buttons & PSP_CTRL_DOWN) move = -0.16f;
-
-    if (pad->Lx > 150) player_angle += 0.035f;
-    else if (pad->Lx < 105) player_angle -= 0.035f;
-    if (pad->Ly < 110) move = 0.13f;
-    else if (pad->Ly > 145) move = -0.13f;
-
-    player_x += sinf(player_angle) * move;
-    player_z += cosf(player_angle) * move;
-    if (player_x > ARENA_LIMIT) player_x = ARENA_LIMIT;
-    if (player_x < -ARENA_LIMIT) player_x = -ARENA_LIMIT;
-    if (player_z > ARENA_LIMIT) player_z = ARENA_LIMIT;
-    if (player_z < -ARENA_LIMIT) player_z = -ARENA_LIMIT;
-
-    if (pressed(buttons, PSP_CTRL_SQUARE)) {
-        int missing = 10 - ammo;
-        if (missing > reserve_ammo) missing = reserve_ammo;
-        if (missing > 0) {
-            ammo += missing;
-            reserve_ammo -= missing;
-            playSound(SFX_RELOAD);
-        }
+    if(pressed(buttons,PSP_CTRL_TRIANGLE))(void)gameplayUseHealth(&player_state,&inventory);
+    if((buttons&PSP_CTRL_LTRIGGER)&&pressed(buttons,PSP_CTRL_LEFT)){
+        int next=(selected_weapon+GAME_WEAPON_MAX-1)%GAME_WEAPON_MAX;
+        if(weapons[next].owned)selected_weapon=next;
     }
-
-    if (pressed(buttons, PSP_CTRL_CROSS) || pressed(buttons, PSP_CTRL_RTRIGGER)) {
-        int hit = 0;
-        if (ammo > 0) {
-            int damage = (buttons & PSP_CTRL_LTRIGGER) ? 2 : 1;
-            float tolerance = (buttons & PSP_CTRL_LTRIGGER) ? 0.34f : 0.22f;
-            --ammo;
-            playSound(SFX_GUNSHOT);
-            for (i = 0; i < TARGET_COUNT; ++i) {
-                float dx, dz, distance, target_angle, difference;
-                if (!target_active[i]) continue;
-                dx = target_x[i] - player_x;
-                dz = target_z[i] - player_z;
-                distance = sqrtf(dx * dx + dz * dz);
-                target_angle = atan2f(dx, dz);
-                difference = target_angle - player_angle;
-                while (difference > PI_F) difference -= 2.0f * PI_F;
-                while (difference < -PI_F) difference += 2.0f * PI_F;
-                if (distance < 14.0f && fabsf(difference) < tolerance) {
-                    target_hp[i] -= damage;
-                    if (target_hp[i] <= 0) {
-                        target_active[i] = 0;
-                        score += 100;
-                    }
-                    hit = 1;
-                    break;
-                }
-            }
-            if (hit) playSound(SFX_HIT);
-        } else {
-            playSound(SFX_EMPTY);
-        }
+    if((buttons&PSP_CTRL_LTRIGGER)&&pressed(buttons,PSP_CTRL_RIGHT)){
+        int next=(selected_weapon+1)%GAME_WEAPON_MAX;
+        if(weapons[next].owned)selected_weapon=next;
     }
-    if (pressed(buttons, PSP_CTRL_SELECT)) save_current_game();
+    if(pressed(buttons,PSP_CTRL_CIRCLE)){
+        if(gameplayBuyAmmo(&player_state,&weapons[selected_weapon],10,2))playSound(SFX_PICKUP);
+    }
+    gameplayUpdateCampaign(&campaign,enemies);
+    hp=player_state.hp; ammo=weapons[selected_weapon].mag; reserve_ammo=weapons[selected_weapon].reserve;
+    if(pressed(buttons,PSP_CTRL_SELECT))save_current_game();
 }
 
 static void render_menu(void) {
@@ -234,10 +223,10 @@ static void render_menu(void) {
     sceGuDisable(GU_CULL_FACE);
     sceGuDisable(GU_TEXTURE_2D);
     arabicDrawTextCenter(240.0f, 48.0f, 1.4f, 0xFFFFFFFF, "ريزيدنت إيفل 4");
-    arabicDrawTextCenter(240.0f, 94.0f, 1.0f, 0xFFB8D8FF, "نسخة تجريبية للعبة");
+    arabicDrawTextCenter(240.0f, 94.0f, 1.0f, 0xFFB8D8FF, "القرية - القلعة - الجزيرة");
     arabicDrawTextCenter(240.0f, 154.0f, 1.0f, 0xFFFFFFFF, "زر البدء لبدء اللعب");
     arabicDrawTextCenter(240.0f, 184.0f, 0.9f, 0xFFFFFFFF, "زر الدائرة للخروج");
-    arabicDrawTextCenter(240.0f, 238.0f, 0.7f, 0xFFB0B8C0, "تجربة أولية على الجهاز المحمول");
+    arabicDrawTextCenter(240.0f, 238.0f, 0.7f, 0xFFB0B8C0, "نسخة تطوير قيد الاختبار");
     sceGuFinish();
     sceGuSync(0, 0);
     sceGuSwapBuffers();
@@ -326,7 +315,7 @@ static void render_scene(int aiming) {
                    hp, score, ammo, reserve_ammo, player_state.money);
     arabicDrawTextRTL(472.0f, 8.0f, 0.72f, 0xFFFFFFFF, hud);
     arabicDrawTextRTL(472.0f, 30.0f, 0.62f, 0xFFB8D8FF,
-                      "التصويب أو الزناد - مربع لإعادة التلقيم - زر الاختيار للحفظ");
+                      "L تصويب | مربع تلقيم | مثلث علاج | دائرة شراء ذخيرة");
     sceGuFinish();
     sceGuSync(0, 0);
     sceGuSwapBuffers();

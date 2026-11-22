@@ -8,6 +8,7 @@
 #include <pspkernel.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <malloc.h>
 
 static int next_pow2(int n) {
     int p = 16;

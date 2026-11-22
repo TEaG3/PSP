@@ -1,14 +1,13 @@
 #include <pspkernel.h>
-#include <pspdebug.h>
 #include <pspdisplay.h>
 #include <pspgu.h>
 #include <pspgum.h>
 #include <pspctrl.h>
-#include <psprtc.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "arabic_font.h"
 #include "audio.h"
 #include "obj_loader.h"
 #include "texture.h"
@@ -22,6 +21,7 @@ PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
 #define SCR_HEIGHT 272
 #define PI_F 3.14159265358979323846f
 #define ARENA_LIMIT 18.0f
+#define TARGET_COUNT 4
 
 typedef struct {
     unsigned int color;
@@ -29,28 +29,28 @@ typedef struct {
 } ColorVertex;
 
 static unsigned int __attribute__((aligned(16))) display_list[262144];
-static float player_x = 0.0f, player_z = 0.0f, player_angle = 0.0f;
-static int hp = 100, score = 0, ammo = 10, reserve_ammo = 40;
-static int game_started = 0, paused = 0;
-static int target_active[4] = {1, 1, 1, 1};
-static float target_x[4] = {-7.0f, 7.0f, -7.0f, 7.0f};
-static float target_z[4] = {-8.0f, -8.0f, 8.0f, 8.0f};
-static ObjModel *player_model = NULL, *enemy_model = NULL;
-static Texture *player_texture = NULL, *enemy_texture = NULL;
+static float player_x, player_z, player_angle;
+static int hp, score, ammo, reserve_ammo;
+static int game_started, paused, previous_buttons;
+static int target_active[TARGET_COUNT];
+static const float target_x[TARGET_COUNT] = {-7.0f, 7.0f, -7.0f, 7.0f};
+static const float target_z[TARGET_COUNT] = {-8.0f, -8.0f, 8.0f, 8.0f};
+static ObjModel *player_model, *enemy_model;
+static Texture *player_texture, *enemy_texture;
 
 static const ColorVertex cube_vertices[] = {
-    {0xFF4D8C35, -0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f,0.5f,0.5f},
-    {0xFF4D8C35, -0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f,0.5f,0.5f},{0xFF4D8C35, -0.5f,0.5f,0.5f},
-    {0xFF356A9A, 0.5f,-0.5f,-0.5f},{0xFF356A9A, -0.5f,-0.5f,-0.5f},{0xFF356A9A, -0.5f,0.5f,-0.5f},
-    {0xFF356A9A, 0.5f,-0.5f,-0.5f},{0xFF356A9A, -0.5f,0.5f,-0.5f},{0xFF356A9A, 0.5f,0.5f,-0.5f},
-    {0xFF9A5B35, -0.5f,-0.5f,-0.5f},{0xFF9A5B35, -0.5f,-0.5f,0.5f},{0xFF9A5B35, -0.5f,0.5f,0.5f},
-    {0xFF9A5B35, -0.5f,-0.5f,-0.5f},{0xFF9A5B35, -0.5f,0.5f,0.5f},{0xFF9A5B35, -0.5f,0.5f,-0.5f},
-    {0xFF8A7130, 0.5f,-0.5f,0.5f},{0xFF8A7130, 0.5f,-0.5f,-0.5f},{0xFF8A7130, 0.5f,0.5f,-0.5f},
-    {0xFF8A7130, 0.5f,-0.5f,0.5f},{0xFF8A7130, 0.5f,0.5f,-0.5f},{0xFF8A7130, 0.5f,0.5f,0.5f},
-    {0xFF666666, -0.5f,0.5f,0.5f},{0xFF666666, 0.5f,0.5f,0.5f},{0xFF666666, 0.5f,0.5f,-0.5f},
-    {0xFF666666, -0.5f,0.5f,0.5f},{0xFF666666, 0.5f,0.5f,-0.5f},{0xFF666666, -0.5f,0.5f,-0.5f},
-    {0xFF444444, -0.5f,-0.5f,-0.5f},{0xFF444444, 0.5f,-0.5f,-0.5f},{0xFF444444, 0.5f,-0.5f,0.5f},
-    {0xFF444444, -0.5f,-0.5f,-0.5f},{0xFF444444, 0.5f,-0.5f,0.5f},{0xFF444444, -0.5f,-0.5f,0.5f}
+    {0xFF4D8C35,-0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f, 0.5f, 0.5f},
+    {0xFF4D8C35,-0.5f,-0.5f, 0.5f},{0xFF4D8C35, 0.5f, 0.5f, 0.5f},{0xFF4D8C35,-0.5f, 0.5f, 0.5f},
+    {0xFF356A9A, 0.5f,-0.5f,-0.5f},{0xFF356A9A,-0.5f,-0.5f,-0.5f},{0xFF356A9A,-0.5f, 0.5f,-0.5f},
+    {0xFF356A9A, 0.5f,-0.5f,-0.5f},{0xFF356A9A,-0.5f, 0.5f,-0.5f},{0xFF356A9A, 0.5f, 0.5f,-0.5f},
+    {0xFF9A5B35,-0.5f,-0.5f,-0.5f},{0xFF9A5B35,-0.5f,-0.5f, 0.5f},{0xFF9A5B35,-0.5f, 0.5f, 0.5f},
+    {0xFF9A5B35,-0.5f,-0.5f,-0.5f},{0xFF9A5B35,-0.5f, 0.5f, 0.5f},{0xFF9A5B35,-0.5f, 0.5f,-0.5f},
+    {0xFF8A7130, 0.5f,-0.5f, 0.5f},{0xFF8A7130, 0.5f,-0.5f,-0.5f},{0xFF8A7130, 0.5f, 0.5f,-0.5f},
+    {0xFF8A7130, 0.5f,-0.5f, 0.5f},{0xFF8A7130, 0.5f, 0.5f,-0.5f},{0xFF8A7130, 0.5f, 0.5f, 0.5f},
+    {0xFF666666,-0.5f, 0.5f, 0.5f},{0xFF666666, 0.5f, 0.5f, 0.5f},{0xFF666666, 0.5f, 0.5f,-0.5f},
+    {0xFF666666,-0.5f, 0.5f, 0.5f},{0xFF666666, 0.5f, 0.5f,-0.5f},{0xFF666666,-0.5f, 0.5f,-0.5f},
+    {0xFF444444,-0.5f,-0.5f,-0.5f},{0xFF444444, 0.5f,-0.5f,-0.5f},{0xFF444444, 0.5f,-0.5f, 0.5f},
+    {0xFF444444,-0.5f,-0.5f,-0.5f},{0xFF444444, 0.5f,-0.5f, 0.5f},{0xFF444444,-0.5f,-0.5f, 0.5f}
 };
 
 static int exit_callback(int arg1, int arg2, void *common) {
@@ -60,7 +60,7 @@ static int exit_callback(int arg1, int arg2, void *common) {
 }
 
 static int callback_thread(SceSize args, void *argp) {
-    int cbid;
+    SceUID cbid;
     (void)args; (void)argp;
     cbid = sceKernelCreateCallback("Exit Callback", exit_callback, NULL);
     if (cbid >= 0) sceKernelRegisterExitCallback(cbid);
@@ -69,29 +69,49 @@ static int callback_thread(SceSize args, void *argp) {
 }
 
 static void setup_callbacks(void) {
-    SceUID thid = sceKernelCreateThread("callback_thread", callback_thread, 0x11, 0x1000, PSP_THREAD_ATTR_USER, NULL);
-    if (thid >= 0) sceKernelStartThread(thid, 0, NULL);
+    SceUID thread = sceKernelCreateThread("callback_thread", callback_thread,
+        0x11, 0x1000, PSP_THREAD_ATTR_USER, NULL);
+    if (thread >= 0) sceKernelStartThread(thread, 0, NULL);
 }
 
-static void draw_cube(float x, float y, float z, float scale, unsigned int tint) {
-    ScePspFVector3 pos = {x, y, z};
-    ScePspFVector3 scl = {scale, scale, scale};
-    (void)tint;
-    sceGumPushMatrix();
-    sceGumTranslate(&pos);
-    sceGumScale(&scl);
-    sceGumDrawArray(GU_TRIANGLES, GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D,
-                    36, NULL, cube_vertices);
-    sceGumPopMatrix();
+static int pressed(unsigned int buttons, unsigned int mask) {
+    return (buttons & mask) && !(previous_buttons & mask);
+}
+
+static void save_current_game(void) {
+    GameState state;
+    state.player_x = player_x;
+    state.player_z = player_z;
+    state.player_angle = player_angle;
+    state.hp = hp;
+    state.score = score;
+    state.ammo = ammo;
+    state.reserve_ammo = reserve_ammo;
+    (void)saveGame(&state);
 }
 
 static void reset_game(void) {
     int i;
-    player_x = 0.0f; player_z = 0.0f; player_angle = 0.0f;
-    hp = 100; score = 0; ammo = 10; reserve_ammo = 40;
-    for (i = 0; i < 4; ++i) target_active[i] = 1;
-    { GameState saved; if (loadGame(&saved) == 0) { player_x = saved.player_x; player_z = saved.player_z; player_angle = saved.player_angle; hp = saved.hp; score = saved.score; ammo = saved.ammo; reserve_ammo = saved.reserve_ammo; } }
-    paused = 0; game_started = 1;
+    GameState saved;
+    player_x = 0.0f;
+    player_z = 0.0f;
+    player_angle = 0.0f;
+    hp = 100;
+    score = 0;
+    ammo = 10;
+    reserve_ammo = 40;
+    for (i = 0; i < TARGET_COUNT; ++i) target_active[i] = 1;
+    if (loadGame(&saved) == 0) {
+        player_x = saved.player_x;
+        player_z = saved.player_z;
+        player_angle = saved.player_angle;
+        hp = saved.hp;
+        score = saved.score;
+        ammo = saved.ammo;
+        reserve_ammo = saved.reserve_ammo;
+    }
+    paused = 0;
+    game_started = 1;
 }
 
 static void load_assets(void) {
@@ -101,65 +121,164 @@ static void load_assets(void) {
     enemy_texture = loadTexturePNG("assets/enemy.png");
 }
 
-static void update_game(void) {
-    SceCtrlData pad;
+static void draw_cube(float x, float y, float z, float scale) {
+    ScePspFVector3 pos = {x, y, z};
+    ScePspFVector3 scl = {scale, scale, scale};
+    sceGumPushMatrix();
+    sceGumTranslate(&pos);
+    sceGumScale(&scl);
+    sceGuDisable(GU_TEXTURE_2D);
+    sceGuDrawArray(GU_TRIANGLES,
+        GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D,
+        36, NULL, cube_vertices);
+    sceGumPopMatrix();
+}
+
+static void draw_model(ObjModel *model, Texture *texture,
+                       float x, float y, float z, float scale) {
+    ScePspFVector3 pos = {x, y, z};
+    ScePspFVector3 scl = {scale, scale, scale};
+    if (!model) {
+        draw_cube(x, y, z, scale);
+        return;
+    }
+    sceGumPushMatrix();
+    sceGumTranslate(&pos);
+    sceGumScale(&scl);
+    if (texture) bindTexture(texture);
+    else sceGuDisable(GU_TEXTURE_2D);
+    objDraw(model);
+    sceGumPopMatrix();
+    sceGuDisable(GU_TEXTURE_2D);
+}
+
+static void update_game(const SceCtrlData *pad) {
     float move = 0.0f;
-    sceCtrlPeekBufferPositive(&pad, 1);
-    if (pad.Buttons & PSP_CTRL_START) { paused = !paused; sceKernelDelayThread(180000); }
-    if (paused) return;
-    if (pad.Buttons & PSP_CTRL_LEFT) player_angle -= 0.045f;
-    if (pad.Buttons & PSP_CTRL_RIGHT) player_angle += 0.045f;
-    if (pad.Buttons & PSP_CTRL_UP) move = 0.16f;
-    if (pad.Buttons & PSP_CTRL_DOWN) move = -0.16f;
-    if (pad.Lx > 150) player_angle += 0.035f;
-    if (pad.Lx < 105) player_angle -= 0.035f;
-    if (pad.Ly < 110) move = 0.13f;
-    if (pad.Ly > 145) move = -0.13f;
+    unsigned int buttons = pad->Buttons;
+    int i;
+
+    if (pressed(buttons, PSP_CTRL_START)) {
+        paused = 1;
+        return;
+    }
+    if (buttons & PSP_CTRL_LEFT) player_angle -= 0.045f;
+    if (buttons & PSP_CTRL_RIGHT) player_angle += 0.045f;
+    if (buttons & PSP_CTRL_UP) move = 0.16f;
+    if (buttons & PSP_CTRL_DOWN) move = -0.16f;
+
+    if (pad->Lx > 150) player_angle += 0.035f;
+    else if (pad->Lx < 105) player_angle -= 0.035f;
+    if (pad->Ly < 110) move = 0.13f;
+    else if (pad->Ly > 145) move = -0.13f;
+
     player_x += sinf(player_angle) * move;
     player_z += cosf(player_angle) * move;
     if (player_x > ARENA_LIMIT) player_x = ARENA_LIMIT;
     if (player_x < -ARENA_LIMIT) player_x = -ARENA_LIMIT;
     if (player_z > ARENA_LIMIT) player_z = ARENA_LIMIT;
     if (player_z < -ARENA_LIMIT) player_z = -ARENA_LIMIT;
-    if (pad.Buttons & PSP_CTRL_SQUARE) {
-        int need = 10 - ammo;
-        if (need > reserve_ammo) need = reserve_ammo;
-        if (need > 0) { ammo += need; reserve_ammo -= need; playSound(SFX_RELOAD); }
-        sceKernelDelayThread(180000);
+
+    if (pressed(buttons, PSP_CTRL_SQUARE)) {
+        int missing = 10 - ammo;
+        if (missing > reserve_ammo) missing = reserve_ammo;
+        if (missing > 0) {
+            ammo += missing;
+            reserve_ammo -= missing;
+            playSound(SFX_RELOAD);
+        }
     }
-    if (pad.Buttons & PSP_CTRL_CROSS) {
-        int i, hit = 0;
+
+    if (pressed(buttons, PSP_CTRL_CROSS) || pressed(buttons, PSP_CTRL_RTRIGGER)) {
+        int hit = 0;
         if (ammo > 0) {
-            --ammo; playSound(SFX_GUNSHOT);
-            for (i = 0; i < 4; ++i) {
-                float dx = target_x[i] - player_x, dz = target_z[i] - player_z;
-                float distance = sqrtf(dx * dx + dz * dz);
-                float target_angle = atan2f(dx, dz);
-                float diff = target_angle - player_angle;
-                while (diff > PI_F) diff -= 2.0f * PI_F;
-                while (diff < -PI_F) diff += 2.0f * PI_F;
-                if (target_active[i] && distance < 14.0f && fabsf(diff) < 0.24f) {
-                    target_active[i] = 0; score += 100; hit = 1; break;
+            float tolerance = (buttons & PSP_CTRL_LTRIGGER) ? 0.34f : 0.22f;
+            --ammo;
+            playSound(SFX_GUNSHOT);
+            for (i = 0; i < TARGET_COUNT; ++i) {
+                float dx, dz, distance, target_angle, difference;
+                if (!target_active[i]) continue;
+                dx = target_x[i] - player_x;
+                dz = target_z[i] - player_z;
+                distance = sqrtf(dx * dx + dz * dz);
+                target_angle = atan2f(dx, dz);
+                difference = target_angle - player_angle;
+                while (difference > PI_F) difference -= 2.0f * PI_F;
+                while (difference < -PI_F) difference += 2.0f * PI_F;
+                if (distance < 14.0f && fabsf(difference) < tolerance) {
+                    target_active[i] = 0;
+                    score += 100;
+                    hit = 1;
+                    break;
                 }
             }
             if (hit) playSound(SFX_HIT);
-        } else playSound(SFX_EMPTY);
-        sceKernelDelayThread(160000);
+        } else {
+            playSound(SFX_EMPTY);
+        }
     }
-    if (pad.Buttons & PSP_CTRL_SELECT) {
-        GameState s;
-        s.player_x = player_x; s.player_z = player_z; s.player_angle = player_angle;
-        s.hp = hp; s.score = score; s.ammo = ammo; s.reserve_ammo = reserve_ammo;
-        saveGame(&s);
-        sceKernelDelayThread(200000);
-    }
+    if (pressed(buttons, PSP_CTRL_SELECT)) save_current_game();
 }
 
-static void render_scene(void) {
+static void render_menu(void) {
+    sceGuStart(GU_DIRECT, display_list);
+    sceGuClearColor(0xFF101820);
+    sceGuClearDepth(0);
+    sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT);
+    sceGuDisable(GU_DEPTH_TEST);
+    sceGuDisable(GU_CULL_FACE);
+    sceGuDisable(GU_TEXTURE_2D);
+    arabicDrawTextCenter(240.0f, 48.0f, 1.4f, 0xFFFFFFFF, "ريزيدنت إيفل 4");
+    arabicDrawTextCenter(240.0f, 94.0f, 1.0f, 0xFFB8D8FF, "نسخة تجريبية للعبة");
+    arabicDrawTextCenter(240.0f, 154.0f, 1.0f, 0xFFFFFFFF, "اضغط X لبدء اللعب");
+    arabicDrawTextCenter(240.0f, 184.0f, 0.9f, 0xFFFFFFFF, "اضغط O للخروج");
+    arabicDrawTextCenter(240.0f, 238.0f, 0.7f, 0xFFB0B8C0, "تعمل على PSP و PPSSPP");
+    sceGuFinish();
+    sceGuSync(0, 0);
+    sceGuSwapBuffers();
+}
+
+static void render_pause(void) {
+    sceGuStart(GU_DIRECT, display_list);
+    sceGuClearColor(0xFF101820);
+    sceGuClear(GU_COLOR_BUFFER_BIT);
+    sceGuDisable(GU_DEPTH_TEST);
+    sceGuDisable(GU_CULL_FACE);
+    sceGuDisable(GU_TEXTURE_2D);
+    arabicDrawTextCenter(240.0f, 62.0f, 1.3f, 0xFFFFFFFF, "اللعبة متوقفة");
+    arabicDrawTextCenter(240.0f, 126.0f, 0.95f, 0xFFFFFFFF, "اضغط START للمتابعة");
+    arabicDrawTextCenter(240.0f, 162.0f, 0.9f, 0xFFFFFFFF, "اضغط O للقائمة الرئيسية");
+    arabicDrawTextCenter(240.0f, 198.0f, 0.85f, 0xFFB8D8FF, "اضغط مثلث لحفظ التقدم");
+    sceGuFinish();
+    sceGuSync(0, 0);
+    sceGuSwapBuffers();
+}
+
+static void draw_aim_line(void) {
+    ColorVertex line[2];
+    line[0].color = 0xFF2020FF;
+    line[0].x = player_x;
+    line[0].y = 0.65f;
+    line[0].z = player_z;
+    line[1].color = 0xFF2020FF;
+    line[1].x = player_x + sinf(player_angle) * 11.0f;
+    line[1].y = 0.65f;
+    line[1].z = player_z + cosf(player_angle) * 11.0f;
+    sceGuDisable(GU_TEXTURE_2D);
+    sceGuDrawArray(GU_LINES,
+        GU_COLOR_8888 | GU_VERTEX_32BITF | GU_TRANSFORM_3D,
+        2, NULL, line);
+}
+
+static void render_scene(int aiming) {
     int i;
-    ScePspFVector3 cam = {player_x - sinf(player_angle) * 7.0f, 5.0f, player_z - cosf(player_angle) * 7.0f};
+    ScePspFVector3 camera = {
+        player_x - sinf(player_angle) * 7.0f, 5.0f,
+        player_z - cosf(player_angle) * 7.0f
+    };
     ScePspFVector3 target = {player_x, 1.0f, player_z};
     ScePspFVector3 up = {0.0f, 1.0f, 0.0f};
+    char hud[128];
+
     sceGuStart(GU_DIRECT, display_list);
     sceGuClearColor(0xFF101820);
     sceGuClearDepth(0);
@@ -168,43 +287,44 @@ static void render_scene(void) {
     sceGuDepthFunc(GU_GEQUAL);
     sceGuShadeModel(GU_SMOOTH);
     sceGuDisable(GU_TEXTURE_2D);
+
     sceGumMatrixMode(GU_PROJECTION);
     sceGumLoadIdentity();
     sceGumPerspective(55.0f, 16.0f / 9.0f, 0.5f, 100.0f);
     sceGumMatrixMode(GU_VIEW);
     sceGumLoadIdentity();
-    sceGumLookAt(&cam, &target, &up);
+    sceGumLookAt(&camera, &target, &up);
     sceGumMatrixMode(GU_MODEL);
     sceGumLoadIdentity();
+
     for (i = -4; i <= 4; ++i) {
-        draw_cube((float)i * 4.0f, -1.0f, -18.0f, 3.8f, 0);
-        draw_cube((float)i * 4.0f, -1.0f, 18.0f, 3.8f, 0);
-        draw_cube(-18.0f, -1.0f, (float)i * 4.0f, 3.8f, 0);
-        draw_cube(18.0f, -1.0f, (float)i * 4.0f, 3.8f, 0);
+        draw_cube((float)i * 4.0f, -1.0f, -18.0f, 3.8f);
+        draw_cube((float)i * 4.0f, -1.0f, 18.0f, 3.8f);
+        draw_cube(-18.0f, -1.0f, (float)i * 4.0f, 3.8f);
+        draw_cube(18.0f, -1.0f, (float)i * 4.0f, 3.8f);
     }
-    draw_cube(player_x, 0.0f, player_z, 1.0f, 0);
-    for (i = 0; i < 4; ++i) {
-        if (target_active[i]) {
-            if (enemy_model) {
-                ScePspFVector3 p = {target_x[i], 0.0f, target_z[i]};
-                ScePspFVector3 s = {1.2f, 1.2f, 1.2f};
-                sceGumPushMatrix(); sceGumTranslate(&p); sceGumScale(&s);
-                bindTexture(enemy_texture); objDraw(enemy_model); sceGumPopMatrix();
-            } else draw_cube(target_x[i], 0.0f, target_z[i], 1.2f, 0);
-        }
+
+    draw_model(player_model, player_texture, player_x, 0.0f, player_z, 1.0f);
+    for (i = 0; i < TARGET_COUNT; ++i) {
+        if (target_active[i])
+            draw_model(enemy_model, enemy_texture, target_x[i], 0.0f, target_z[i], 1.2f);
     }
+    if (aiming) draw_aim_line();
+
     sceGuDisable(GU_DEPTH_TEST);
+    sceGuDisable(GU_CULL_FACE);
+    sceGuDisable(GU_TEXTURE_2D);
+    (void)snprintf(hud, sizeof(hud), "الصحة %d - النقاط %d - الذخيرة %d/%d",
+                   hp, score, ammo, reserve_ammo);
+    arabicDrawTextRTL(472.0f, 8.0f, 0.72f, 0xFFFFFFFF, hud);
+    arabicDrawTextRTL(472.0f, 30.0f, 0.62f, 0xFFB8D8FF,
+                      "X أو R إطلاق - مربع إعادة التلقيم - SELECT حفظ");
     sceGuFinish();
     sceGuSync(0, 0);
     sceGuSwapBuffers();
 }
 
-int main(void) {
-    int running = 1;
-    setup_callbacks();
-    pspDebugScreenInit();
-    sceCtrlSetSamplingCycle(0);
-    sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
+static void init_graphics(void) {
     sceGuInit();
     sceGuStart(GU_DIRECT, display_list);
     sceGuDrawBuffer(GU_PSM_8888, (void *)0, BUF_WIDTH);
@@ -216,9 +336,19 @@ int main(void) {
     sceGuEnable(GU_SCISSOR_TEST);
     sceGuEnable(GU_CULL_FACE);
     sceGuFrontFace(GU_CW);
-    sceGuFinish(); sceGuSync(0, 0);
+    sceGuFinish();
+    sceGuSync(0, 0);
     sceDisplayWaitVblankStart();
     sceGuDisplay(GU_TRUE);
+}
+
+int main(void) {
+    int running = 1;
+    setup_callbacks();
+    sceCtrlSetSamplingCycle(0);
+    sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
+    arabicFontInit();
+    init_graphics();
     initAudio();
     load_assets();
 
@@ -226,29 +356,24 @@ int main(void) {
         SceCtrlData pad;
         sceCtrlPeekBufferPositive(&pad, 1);
         if (!game_started) {
-            pspDebugScreenSetXY(7, 5);
-            pspDebugScreenPrintf("RE4 PROTO - PSP\n\n");
-            pspDebugScreenPrintf("X: START GAME\n");
-            pspDebugScreenPrintf("O: EXIT\n");
-            pspDebugScreenPrintf("\nPrototype build - placeholder assets included.\n");
-            if (pad.Buttons & PSP_CTRL_CROSS) { reset_game(); sceKernelDelayThread(200000); }
-            if (pad.Buttons & PSP_CTRL_CIRCLE) running = 0;
-            sceDisplayWaitVblankStart();
+            render_menu();
+            if (pressed(pad.Buttons, PSP_CTRL_CROSS)) reset_game();
+            if (pressed(pad.Buttons, PSP_CTRL_CIRCLE)) running = 0;
         } else if (paused) {
-            pspDebugScreenSetXY(8, 7);
-            pspDebugScreenPrintf("PAUSED\n\nSTART: RESUME\nO: MAIN MENU\n");
-            if (pad.Buttons & PSP_CTRL_CIRCLE) { game_started = 0; paused = 0; sceKernelDelayThread(200000); }
-            if (pad.Buttons & PSP_CTRL_START) { paused = 0; sceKernelDelayThread(200000); }
-            sceDisplayWaitVblankStart();
+            render_pause();
+            if (pressed(pad.Buttons, PSP_CTRL_START)) paused = 0;
+            if (pressed(pad.Buttons, PSP_CTRL_CIRCLE)) {
+                game_started = 0;
+                paused = 0;
+            }
+            if (pressed(pad.Buttons, PSP_CTRL_TRIANGLE)) save_current_game();
         } else {
-            update_game();
-            render_scene();
-            pspDebugScreenSetXY(0, 0);
-            pspDebugScreenPrintf("HP:%d  SCORE:%d  AMMO:%d/%d  SELECT:SAVE  START:PAUSE",
-                                 hp, score, ammo, reserve_ammo);
-            sceDisplayWaitVblankStart();
+            update_game(&pad);
+            render_scene((pad.Buttons & PSP_CTRL_LTRIGGER) != 0);
         }
         if (pad.Buttons & PSP_CTRL_HOME) running = 0;
+        previous_buttons = pad.Buttons;
+        sceDisplayWaitVblankStart();
     }
 
     if (player_model) objFree(player_model);

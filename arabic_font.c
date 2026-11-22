@@ -78,14 +78,15 @@ static int base64_value(char c) {
 
 static size_t decode_base64(unsigned char *out, size_t capacity) {
     size_t used = 0;
-    int value = 0, bits = -8;
+    uint32_t value = 0;
+    int bits = -8;
     const char *p = g_arabic_font_b64;
     while (*p && used < capacity) {
         int v;
         if (*p == '=') break;
         v = base64_value(*p++);
         if (v < 0) continue;
-        value = (value << 6) | v;
+        value = (value << 6) | (uint32_t)v;
         bits += 6;
         if (bits >= 0) {
             if (used >= capacity) break;
@@ -165,16 +166,17 @@ static int decode_utf8(const char **cursor, uint32_t *out) {
     if (!*p) return 0;
     if (p[0] < 0x80) {
         cp = p[0]; *cursor += 1;
-    } else if ((p[0] & 0xE0) == 0xC0 && p[1]) {
+    } else if ((p[0] & 0xE0) == 0xC0 && (p[1] & 0xC0) == 0x80) {
         cp = ((uint32_t)(p[0] & 0x1F) << 6) | (p[1] & 0x3F);
         *cursor += 2;
         if (cp < 0x80) cp = '?';
-    } else if ((p[0] & 0xF0) == 0xE0 && p[1] && p[2]) {
+    } else if ((p[0] & 0xF0) == 0xE0 && (p[1] & 0xC0) == 0x80 && (p[2] & 0xC0) == 0x80) {
         cp = ((uint32_t)(p[0] & 0x0F) << 12) |
              ((uint32_t)(p[1] & 0x3F) << 6) | (p[2] & 0x3F);
         *cursor += 3;
         if (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF)) cp = '?';
-    } else if ((p[0] & 0xF8) == 0xF0 && p[1] && p[2] && p[3]) {
+    } else if ((p[0] & 0xF8) == 0xF0 && (p[1] & 0xC0) == 0x80 &&
+               (p[2] & 0xC0) == 0x80 && (p[3] & 0xC0) == 0x80) {
         cp = ((uint32_t)(p[0] & 0x07) << 18) |
              ((uint32_t)(p[1] & 0x3F) << 12) |
              ((uint32_t)(p[2] & 0x3F) << 6) | (p[3] & 0x3F);

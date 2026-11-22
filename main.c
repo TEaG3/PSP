@@ -20,9 +20,7 @@ PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
 #define BUF_WIDTH 512
 #define SCR_WIDTH 480
 #define SCR_HEIGHT 272
-#define PI_F 3.14159265358979323846f
 #define ARENA_LIMIT 18.0f
-#define TARGET_COUNT 4
 
 typedef struct {
     unsigned int color;
@@ -33,10 +31,6 @@ static unsigned int __attribute__((aligned(16))) display_list[262144];
 static float player_x, player_z, player_angle;
 static int hp, score, ammo, reserve_ammo;
 static int game_started, paused, previous_buttons;
-static int target_active[TARGET_COUNT];
-static int target_hp[TARGET_COUNT];
-static const float target_x[TARGET_COUNT] = {-7.0f, 7.0f, -7.0f, 7.0f};
-static const float target_z[TARGET_COUNT] = {-8.0f, -8.0f, 8.0f, 8.0f};
 static ObjModel *player_model, *enemy_model;
 static Texture *player_texture, *enemy_texture;
 static PlayerState player_state;
@@ -100,7 +94,6 @@ static void save_current_game(void) {
 }
 
 static void reset_game(void) {
-    int i;
     GameState saved;
     player_x = 0.0f;
     player_z = 0.0f;
@@ -112,7 +105,6 @@ static void reset_game(void) {
     gameplayInit(&player_state, enemies, weapons, &inventory, &campaign);
     gameplayLoadStage(STAGE_VILLAGE, &current_stage, enemies);
     player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
-    for (i = 0; i < TARGET_COUNT; ++i) { target_active[i] = 0; target_hp[i] = 2; }
     if (loadGame(&saved) == 0) {
         player_x = saved.player_x;
         player_z = saved.player_z;
@@ -179,10 +171,10 @@ static void update_game(const SceCtrlData *pad) {
     if(pad->Ly<110)move=(buttons&PSP_CTRL_RTRIGGER)?0.24f:0.14f;
     else if(pad->Ly>145)move=-0.12f;
     player_x+=sinf(player_angle)*move; player_z+=cosf(player_angle)*move;
-    if(player_x>ARENA_LIMIT)player_x=ARENA_LIMIT;
-    if(player_x<-ARENA_LIMIT)player_x=-ARENA_LIMIT;
-    if(player_z>ARENA_LIMIT)player_z=ARENA_LIMIT;
-    if(player_z<-ARENA_LIMIT)player_z=-ARENA_LIMIT;
+    if(player_x>current_stage.limit)player_x=current_stage.limit;
+    if(player_x<-current_stage.limit)player_x=-current_stage.limit;
+    if(player_z>current_stage.limit)player_z=current_stage.limit;
+    if(player_z<-current_stage.limit)player_z=-current_stage.limit;
     player_state.x=player_x; player_state.z=player_z; player_state.angle=player_angle;
     player_state.aiming=(buttons&PSP_CTRL_LTRIGGER)!=0;
     player_state.anim=move==0.0f?(player_state.aiming?PLAYER_AIM:PLAYER_IDLE):
@@ -329,10 +321,11 @@ static void render_scene(int aiming) {
     sceGumLoadIdentity();
 
     for (i = -4; i <= 4; ++i) {
-        draw_cube((float)i * 4.0f, -1.0f, -18.0f, 3.8f);
-        draw_cube((float)i * 4.0f, -1.0f, 18.0f, 3.8f);
-        draw_cube(-18.0f, -1.0f, (float)i * 4.0f, 3.8f);
-        draw_cube(18.0f, -1.0f, (float)i * 4.0f, 3.8f);
+        float edge=current_stage.limit;
+        draw_cube((float)i * 4.0f, -1.0f, -edge, 3.8f);
+        draw_cube((float)i * 4.0f, -1.0f, edge, 3.8f);
+        draw_cube(-edge, -1.0f, (float)i * 4.0f, 3.8f);
+        draw_cube(edge, -1.0f, (float)i * 4.0f, 3.8f);
     }
 
     draw_model(player_model, player_texture, player_x, 0.0f, player_z, 1.0f);

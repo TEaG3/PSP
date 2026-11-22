@@ -1,0 +1,10 @@
+{
+  "name": "PSP Dev (RE4 Proto)",
+  "image": "pspdev/pspdev:latest",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.cpptools"]
+    }
+  },
+  "postCreateCommand": "curl -fsSL https://raw.githubusercontent.com/nothings/stb/master/stb_image.h -o stb_image.h && psp-config --version"
+}

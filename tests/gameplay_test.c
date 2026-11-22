@@ -80,11 +80,36 @@ static void test_enemy_and_campaign(void) {
     assert(c.boss_active==0);
 }
 
+
+static void test_invalid_inputs_and_limits(void) {
+    PlayerState p; EnemyStateData enemies[GAME_ENEMY_MAX];
+    WeaponState weapons[GAME_WEAPON_MAX]; InventoryState bag; CampaignState c;
+    gameplayInit(&p,enemies,weapons,&bag,&c);
+    assert(gameplayBuyAmmo(&p,&weapons[WEAPON_HANDGUN],2147483647,2)==0);
+    assert(weapons[WEAPON_HANDGUN].reserve==50);
+    assert(gameplayBuyHealth(&p,&bag,120)==1);
+    bag.amount[ITEM_HEALTH]=99;
+    assert(gameplayBuyHealth(&p,&bag,1)==0);
+    assert(p.money==180);
+    gameplayUpdateEnemies(NULL,enemies,1.0f/60.0f);
+    gameplayUpdateEnemies(&p,enemies,-1.0f);
+    assert(gameplayFire(NULL,&weapons[WEAPON_HANDGUN],enemies,GAME_ENEMY_MAX,10.0f,0.2f)==-1);
+    c.boss_active=1; c.boss_hp=20;
+    assert(gameplayBossDamage(&c,5)==0);
+    assert(c.boss_hp==20);
+    c.boss_active=2;
+    assert(gameplayBossDamage(&c,5)==0);
+    assert(c.boss_hp==15);
+    assert(gameplayBossDamage(&c,20)==1);
+    assert(c.boss_hp==0 && c.boss_active==0);
+}
+
 int main(void) {
     test_stage_setup();
     test_weapons_and_inventory();
     test_fire_and_reload();
     test_enemy_and_campaign();
+    test_invalid_inputs_and_limits();
     puts("gameplay tests: PASS");
     return 0;
 }

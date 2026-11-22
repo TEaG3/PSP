@@ -115,6 +115,16 @@ int gameplayBuyHealth(PlayerState *p,InventoryState *b,int price){
     if(p->money<price||price<=0)return 0;
     p->money-=price;b->amount[ITEM_HEALTH]++;return 1;
 }
+int gameplayBuyWeapon(PlayerState *p,WeaponState weapons[GAME_WEAPON_MAX],WeaponId id){
+    WeaponState *w;
+    if(id<WEAPON_HANDGUN||id>=GAME_WEAPON_MAX)return 0;
+    w=&weapons[id]; if(w->owned||p->money<w->price)return 0;
+    p->money-=w->price;w->owned=1;w->mag=w->capacity;w->reserve=w->capacity*3;return 1;
+}
+int gameplayUpgradeWeapon(PlayerState *p,WeaponState *w,int price){
+    if(!w||!w->owned||price<=0||p->money<price||w->damage>=8)return 0;
+    p->money-=price;w->damage++;return 1;
+}
 int gameplayUseHealth(PlayerState *p,InventoryState *b){
     if(b->amount[ITEM_HEALTH]<=0||p->hp>=100)return 0;
     b->amount[ITEM_HEALTH]--;p->hp+=40;if(p->hp>100)p->hp=100;return 1;

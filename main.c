@@ -165,46 +165,91 @@ static void draw_cube(float x, float y, float z, float scale) {
     sceGumPopMatrix();
 }
 
-static void draw_tinted_cube(float x,float y,float z,float scale,unsigned int color) {
-    ColorVertex vertices[36];
-    ScePspFVector3 pos={x,y,z}, scl={scale,scale,scale};
-    int i;
-    memcpy(vertices,cube_vertices,sizeof(vertices));
-    for(i=0;i<36;i++)vertices[i].color=color;
+static void draw_box(float x,float y,float z,float sx,float sy,float sz) {
+    ScePspFVector3 pos={x,y,z}, scale={sx,sy,sz};
     sceGumPushMatrix();
     sceGumTranslate(&pos);
-    sceGumScale(&scl);
+    sceGumScale(&scale);
     sceGuDisable(GU_TEXTURE_2D);
     sceGuDrawArray(GU_TRIANGLES,GU_COLOR_8888|GU_VERTEX_32BITF|GU_TRANSFORM_3D,
-                   36,NULL,vertices);
+                   36,NULL,cube_vertices);
+    sceGumPopMatrix();
+}
+
+static void draw_local_box(float x,float y,float z,float sx,float sy,float sz,float rz) {
+    ScePspFVector3 pos={x,y,z}, scale={sx,sy,sz};
+    sceGumPushMatrix();
+    sceGumTranslate(&pos);
+    sceGumRotateZ(rz);
+    sceGumScale(&scale);
+    sceGuDisable(GU_TEXTURE_2D);
+    sceGuDrawArray(GU_TRIANGLES,GU_COLOR_8888|GU_VERTEX_32BITF|GU_TRANSFORM_3D,
+                   36,NULL,cube_vertices);
     sceGumPopMatrix();
 }
 
 static void draw_stage_environment(void) {
     int i;
     float edge=current_stage.limit;
-    /* A broad low platform acts as the ground plane on the PSP's fixed-function renderer. */
-    draw_tinted_cube(0.0f,-2.0f,0.0f,edge*2.0f,current_stage.ground_color);
+    draw_box(0.0f,-0.75f,0.0f,edge*2.0f,0.7f,edge*2.0f);
     if(current_stage.id==STAGE_VILLAGE){
         for(i=-1;i<=1;i++){
-            draw_tinted_cube((float)i*8.0f,0.5f,7.0f,3.0f,0xFF70543B);
-            draw_tinted_cube((float)i*8.0f,2.5f,7.0f,2.2f,0xFF9A744A);
+            float x=(float)i*9.0f;
+            draw_box(x,0.8f,7.0f,4.4f,2.2f,3.5f);
+            draw_box(x,2.4f,7.0f,4.9f,0.7f,3.9f);
+            draw_box(x+0.4f,0.0f,5.2f,0.9f,1.4f,0.25f);
         }
-        draw_tinted_cube(-11.0f,1.0f,-5.0f,2.5f,0xFF4E653B);
-        draw_tinted_cube(11.0f,1.0f,-5.0f,2.5f,0xFF4E653B);
-    } else if(current_stage.id==STAGE_CASTLE){
         for(i=-2;i<=2;i++){
-            draw_tinted_cube((float)i*7.0f,2.0f,edge-4.0f,2.0f,0xFF77716B);
-            draw_tinted_cube((float)i*7.0f,2.0f,-edge+4.0f,2.0f,0xFF77716B);
+            draw_box((float)i*6.0f,1.7f,-9.0f,0.7f,3.3f,0.7f);
+            draw_box((float)i*6.0f,0.5f,-9.0f,2.0f,0.6f,1.5f);
         }
-        draw_tinted_cube(0.0f,1.0f,0.0f,4.0f,0xFF66513D);
+    } else if(current_stage.id==STAGE_CASTLE){
+        draw_box(0.0f,2.0f,-edge+1.0f,edge*1.8f,4.0f,1.5f);
+        draw_box(0.0f,2.0f,edge-1.0f,edge*1.8f,4.0f,1.5f);
+        for(i=-2;i<=2;i++){
+            draw_box((float)i*8.0f,3.2f,-edge+1.0f,2.2f,6.5f,2.2f);
+            draw_box((float)i*8.0f,3.2f,edge-1.0f,2.2f,6.5f,2.2f);
+        }
+        draw_box(-9.0f,0.6f,0.0f,2.8f,1.2f,2.8f);
+        draw_box(9.0f,0.6f,0.0f,2.8f,1.2f,2.8f);
     } else {
         for(i=-2;i<=2;i++){
-            draw_tinted_cube((float)i*7.0f,0.5f,6.0f,2.0f,0xFF68777A);
-            draw_tinted_cube((float)i*7.0f,0.5f,-7.0f,2.0f,0xFF68777A);
+            draw_box((float)i*7.0f,0.4f,-8.0f,2.8f,0.8f,2.8f);
+            draw_box((float)i*7.0f,0.7f,8.0f,2.8f,1.4f,2.8f);
         }
-        draw_tinted_cube(0.0f,1.0f,0.0f,3.5f,0xFF59636A);
+        draw_box(-12.0f,1.0f,0.0f,3.5f,2.0f,3.5f);
+        draw_box(12.0f,1.0f,0.0f,3.5f,2.0f,3.5f);
+        draw_box(0.0f,2.0f,-edge+2.0f,edge*1.7f,4.0f,1.2f);
     }
+}
+
+static void draw_actor(ObjModel *model,Texture *texture,float x,float y,float z,
+                       float scale,float angle,float phase,int is_player,int boss) {
+    ScePspFVector3 pos={x,y+(sinf(phase*2.0f)*0.045f),z};
+    ScePspFVector3 size={scale,scale,scale};
+    if(model){
+        sceGumPushMatrix();
+        sceGumTranslate(&pos);sceGumRotateY(angle);sceGumScale(&size);
+        if(texture)bindTexture(texture);else sceGuDisable(GU_TEXTURE_2D);
+        objDraw(model);
+        sceGumPopMatrix();sceGuDisable(GU_TEXTURE_2D);
+        return;
+    }
+    sceGumPushMatrix();
+    sceGumTranslate(&pos);sceGumRotateY(angle);sceGumScale(&size);
+    draw_local_box(0.0f,0.98f,0.0f,0.62f,0.92f,0.38f,0.0f);
+    draw_local_box(0.0f,1.65f,0.0f,0.44f,0.48f,0.42f,0.0f);
+    draw_local_box(-0.43f,1.15f,0.13f,0.22f,0.75f,0.24f,sinf(phase)*0.22f);
+    draw_local_box(0.43f,1.15f,0.13f,0.22f,0.75f,0.24f,-sinf(phase)*0.22f);
+    draw_local_box(-0.19f,0.34f,0.0f,0.25f,0.72f,0.28f,sinf(phase)*0.3f);
+    draw_local_box(0.19f,0.34f,0.0f,0.25f,0.72f,0.28f,-sinf(phase)*0.3f);
+    if(is_player){
+        draw_local_box(0.17f,0.97f,0.53f,0.13f,0.13f,0.72f,0.0f);
+    } else if(boss){
+        draw_local_box(-0.55f,1.85f,0.0f,0.22f,0.42f,0.22f,-0.35f);
+        draw_local_box(0.55f,1.85f,0.0f,0.22f,0.42f,0.22f,0.35f);
+    }
+    sceGumPopMatrix();
 }
 
 static void draw_model(ObjModel *model, Texture *texture,
@@ -230,7 +275,7 @@ static void update_game(const SceCtrlData *pad) {
     float move=0.0f;
     unsigned int buttons=pad->Buttons;
     int hit;
-    if(pressed(buttons,PSP_CTRL_START)){paused=1;return;}
+    if(pressed(buttons,PSP_CTRL_START)){paused=1;pause_mode=0;return;}
     if(buttons&PSP_CTRL_LEFT)player_angle-=0.045f;
     if(buttons&PSP_CTRL_RIGHT)player_angle+=0.045f;
     if(buttons&PSP_CTRL_UP)move=(buttons&PSP_CTRL_RTRIGGER)?0.24f:0.14f;
@@ -251,11 +296,16 @@ static void update_game(const SceCtrlData *pad) {
     if(pressed(buttons,PSP_CTRL_SQUARE)&&gameplayReload(&player_state,&weapons[selected_weapon]))playSound(SFX_RELOAD);
     gameplayUpdateReload(&player_state,&weapons[selected_weapon]);
     gameplayUpdateEnemies(&player_state,enemies,1.0f/30.0f);
-    if(pressed(buttons,PSP_CTRL_CROSS)||pressed(buttons,PSP_CTRL_RTRIGGER)){
+    if(animation_frame<1000000)animation_frame++;
+    if(muzzle_flash_frames>0)muzzle_flash_frames--;
+    if(hit_flash_frames>0)hit_flash_frames--;
+    if(player_state.hp<player_previous_hp){playSound(SFX_HURT);hit_flash_frames=8;}
+    player_previous_hp=player_state.hp;
+    if(pressed(buttons,PSP_CTRL_CROSS)){
         int had_ammo=weapons[selected_weapon].mag;
         hit=gameplayFire(&player_state,&weapons[selected_weapon],enemies,GAME_ENEMY_MAX,16.0f,
                          player_state.aiming?0.28f:0.18f);
-        if(had_ammo>0){playSound(SFX_GUNSHOT);if(hit>=0){score+=25;playSound(SFX_HIT);}}
+        if(had_ammo>0){playSound(SFX_GUNSHOT);muzzle_flash_frames=3;if(hit>=0){score+=25;playSound(SFX_HIT);}}
         else playSound(SFX_EMPTY);
     }
     if(pressed(buttons,PSP_CTRL_TRIANGLE)){
@@ -371,7 +421,7 @@ static void render_scene(int aiming) {
     char hud[128];
 
     sceGuStart(GU_DIRECT, display_list);
-    sceGuClearColor(current_stage.ground_color ? current_stage.ground_color : 0xFF101820);
+    sceGuClearColor(current_stage.id==STAGE_CASTLE?0xFF252734:(current_stage.id==STAGE_ISLAND?0xFF35494F:0xFF293426));
     sceGuClearDepth(0);
     sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT);
     sceGuEnable(GU_DEPTH_TEST);
@@ -398,12 +448,18 @@ static void render_scene(int aiming) {
         draw_cube(edge, -1.0f, (float)i * 4.0f, 3.8f);
     }
 
-    draw_model(player_model, player_texture, player_x, 0.0f, player_z, 1.0f);
+    draw_actor(player_model,player_texture,player_x,0.0f,player_z,1.0f,player_angle,
+               (float)animation_frame*0.16f,1,0);
     for (i = 0; i < GAME_ENEMY_MAX; ++i) {
         if (enemies[i].active && enemies[i].state != ENEMY_DEAD)
-            draw_model(enemy_model, enemy_texture, enemies[i].x, 0.0f, enemies[i].z, enemies[i].boss ? 1.7f : 1.2f);
+            draw_actor(enemy_model,enemy_texture,enemies[i].x,0.0f,enemies[i].z,
+                       enemies[i].boss?1.55f:1.0f,enemies[i].angle,
+                       (float)animation_frame*0.13f,0,enemies[i].boss);
     }
     if (aiming) draw_aim_line();
+    if(muzzle_flash_frames>0){
+        draw_box(player_x+sinf(player_angle)*0.8f,1.05f,player_z+cosf(player_angle)*0.8f,0.22f,0.22f,0.22f);
+    }
 
     sceGuDisable(GU_DEPTH_TEST);
     sceGuDisable(GU_CULL_FACE);
@@ -412,6 +468,8 @@ static void render_scene(int aiming) {
                    hp, score, ammo, reserve_ammo, player_state.money);
     arabicDrawTextRTL(472.0f, 8.0f, 0.72f, 0xFFFFFFFF, hud);
     arabicDrawTextRTL(472.0f, 52.0f, 0.68f, 0xFFFFD080, current_stage.name);
+    (void)snprintf(hud,sizeof(hud),"المهمة %d/%d - الأعداء %d/%d",campaign.objective,campaign.objective_total,campaign.defeated,current_stage.enemy_total);
+    arabicDrawTextRTL(472.0f,74.0f,0.62f,0xFFFFFFFF,hud);
     arabicDrawTextRTL(472.0f, 30.0f, 0.62f, 0xFFB8D8FF,
                       "L تصويب | مربع تلقيم | مثلث علاج | L+مثلث ترقية | دائرة ذخيرة | L+دائرة سلاح");
     sceGuFinish();

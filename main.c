@@ -306,7 +306,7 @@ static void update_game(const SceCtrlData *pad) {
     if(player_state.hp<=0){paused=1;pause_mode=4;}
     if(pressed(buttons,PSP_CTRL_CROSS)){
         int had_ammo=weapons[selected_weapon].mag;
-        hit=gameplayFire(&player_state,&weapons[selected_weapon],enemies,GAME_ENEMY_MAX,16.0f,
+        hit=gameplayFire(&player_state,&weapons[selected_weapon],enemies,GAME_ENEMY_MAX,
                          selected_weapon==WEAPON_RIFLE?24.0f:(selected_weapon==WEAPON_SHOTGUN?11.0f:16.0f),
                          selected_weapon==WEAPON_RIFLE?0.08f:(selected_weapon==WEAPON_SHOTGUN?0.36f:
                          (player_state.aiming?0.10f:0.20f)));

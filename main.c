@@ -63,7 +63,7 @@ static int callback_thread(SceSize args, void *argp) {
     int cbid;
     (void)args; (void)argp;
     cbid = sceKernelCreateCallback("Exit Callback", exit_callback, NULL);
-    if (cbid >= 0) sce月KernelRegisterExitCallback(cbid);
+    if (cbid >= 0) sceKernelRegisterExitCallback(cbid);
     sceKernelSleepThreadCB();
     return 0;
 }
@@ -90,6 +90,7 @@ static void reset_game(void) {
     player_x = 0.0f; player_z = 0.0f; player_angle = 0.0f;
     hp = 100; score = 0; ammo = 10; reserve_ammo = 40;
     for (i = 0; i < 4; ++i) target_active[i] = 1;
+    { GameState saved; if (loadGame(&saved) == 0) { player_x = saved.player_x; player_z = saved.player_z; player_angle = saved.player_angle; hp = saved.hp; score = saved.score; ammo = saved.ammo; reserve_ammo = saved.reserve_ammo; } }
     paused = 0; game_started = 1;
 }
 
@@ -184,8 +185,12 @@ static void render_scene(void) {
     draw_cube(player_x, 0.0f, player_z, 1.0f, 0);
     for (i = 0; i < 4; ++i) {
         if (target_active[i]) {
-            if (enemy_model) { bindTexture(enemy_texture); objDraw(enemy_model); }
-            else draw_cube(target_x[i], 0.0f, target_z[i], 1.2f, 0);
+            if (enemy_model) {
+                ScePspFVector3 p = {target_x[i], 0.0f, target_z[i]};
+                ScePspFVector3 s = {1.2f, 1.2f, 1.2f};
+                sceGumPushMatrix(); sceGumTranslate(&p); sceGumScale(&s);
+                bindTexture(enemy_texture); objDraw(enemy_model); sceGumPopMatrix();
+            } else draw_cube(target_x[i], 0.0f, target_z[i], 1.2f, 0);
         }
     }
     sceGuDisable(GU_DEPTH_TEST);

@@ -23,7 +23,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate optional 3D assets (Python)
+      - name: Generate original low-poly game assets (Python)
+        run: python3 tools/generate_prototype_assets.py
+
+      - name: Validate generated 3D assets (Python)
         run: python3 tools/validate_assets.py
 
       - name: Run gameplay unit tests
